@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OM × ECHEM — Video Generator v1.6.0</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+  :root{
+    --ink:#0E1113;
+    --panel:#171B1F;
+    --panel-2:#1D2227;
+    --line:#2A3036;
+    --text:#E8ECEF;
+    --muted:#8A94A0;
+    --amber:#FFB454;
+    --cyan:#57D9C4;
+    --red:#FF6B6B;
+    --radius:3px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--ink);color:var(--text);
+    font-family:'Space Grotesk',system-ui,sans-serif;}
+  ::selection{background:var(--amber);color:var(--ink);}
+
+  .mono{font-family:'IBM Plex Mono',monospace;}
+
+  header{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:18px 28px;border-bottom:1px solid var(--line);
+    background:
+      repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(255,255,255,0.02) 39px, rgba(255,255,255,0.02) 40px);
+  }
+  header h1{
+    font-size:16px;font-weight:600;letter-spacing:0.08em;margin:0;
+    text-transform:uppercase;
+  }
+  header h1 span{color:var(--amber);}
+  .header-right{display:flex;align-items:center;gap:14px;}
+  .language-select{background:var(--panel-2);border:1px solid var(--line);color:var(--text);padding:5px 8px;border-radius:var(--radius);font-family:'IBM Plex Mono',monospace;font-size:11px;}
+  .verbadge{
+    display:inline-flex;align-items:center;gap:6px;
+    background:var(--panel-2);border:1px solid var(--line);color:var(--cyan);
+    font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.04em;
+    padding:5px 10px;border-radius:var(--radius);cursor:pointer;
+  }
+  .verbadge:hover{border-color:var(--cyan);}
+  .status{
+    display:flex;align-items:center;gap:8px;
+    font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);
+  }
+
+  /* changelog modal */
+  .modal-overlay{
+    display:none;position:fixed;inset:0;background:rgba(6,8,10,0.72);
+    z-index:100;align-items:center;justify-content:center;padding:24px;
+  }
+  .modal-overlay.open{display:flex;}
+  .modal-box{
+    width:100%;max-width:480px;max-height:80vh;display:flex;flex-direction:column;
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    box-shadow:0 12px 40px rgba(0,0,0,0.5);
+  }
+  .modal-head{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 18px;border-bottom:1px solid var(--line);
+    font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:0.1em;
+    text-transform:uppercase;color:var(--muted);
+  }
+  .modal-close{
+    background:transparent;border:1px solid var(--line);color:var(--muted);
+    padding:4px 9px;border-radius:var(--radius);cursor:pointer;font-size:12px;
+  }
+  .modal-close:hover{border-color:var(--red);color:var(--red);}
+  .modal-body{overflow-y:auto;padding:16px 18px;}
+  .changelog-entry{margin-bottom:16px;}
+  .changelog-entry:last-child{margin-bottom:0;}
+  .changelog-entry .cl-head{
+    display:flex;align-items:baseline;gap:10px;margin-bottom:6px;
+  }
+  .changelog-entry .cl-ver{
+    font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:14px;color:var(--amber);
+  }
+  .changelog-entry .cl-date{
+    font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);
+  }
+  .changelog-entry ul{margin:0;padding-left:18px;}
+  .changelog-entry li{font-size:12.5px;line-height:1.7;color:var(--text);}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--muted);
+    box-shadow:0 0 0 3px rgba(255,255,255,0.05);}
+  .dot.ready{background:var(--cyan);}
+  .dot.busy{background:var(--amber);animation:pulse 1.1s ease-in-out infinite;}
+  .dot.err{background:var(--red);}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.35;}}
+
+  main{
+    display:grid;grid-template-columns:360px 1fr;gap:0;
+    min-height:calc(100vh - 61px);
+  }
+  @media (max-width:920px){
+    main{grid-template-columns:1fr;}
+  }
+
+  .rail{border-right:1px solid var(--line);padding:24px;overflow-y:auto;}
+  .stage{padding:24px;display:flex;flex-direction:column;gap:18px;}
+
+  .step{margin-bottom:28px;}
+  .step-num{
+    font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--amber);
+    letter-spacing:0.12em;display:block;margin-bottom:4px;
+  }
+  .step h2{font-size:14px;margin:0 0 12px;font-weight:600;letter-spacing:0.02em;}
+
+  .field{margin-bottom:12px;}
+  .field label{
+    display:block;font-size:11px;color:var(--muted);margin-bottom:5px;
+    font-family:'IBM Plex Mono',monospace;letter-spacing:0.02em;
+  }
+  .field input[type="text"], .field input[type="number"], .field select{
+    width:100%;background:var(--panel-2);border:1px solid var(--line);
+    color:var(--text);padding:8px 10px;border-radius:var(--radius);
+    font-family:'IBM Plex Mono',monospace;font-size:12.5px;
+  }
+  .field input[type="text"]::placeholder{color:#586068;}
+  .field input:focus, .field select:focus{outline:1px solid var(--amber);border-color:var(--amber);}
+
+  .filebtn{
+    display:flex;align-items:center;gap:10px;width:100%;
+    background:var(--panel-2);border:1px dashed var(--line);
+    color:var(--text);padding:10px 12px;border-radius:var(--radius);
+    cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:12px;
+    transition:border-color .15s;
+  }
+  .filebtn:hover{border-color:var(--amber);}
+  .filebtn input{display:none;}
+  .filesummary{margin-top:6px;font-size:11.5px;color:var(--cyan);font-family:'IBM Plex Mono',monospace;
+    min-height:14px;}
+  .filesummary.warn{color:var(--red);}
+
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+
+  .checkline{display:flex;align-items:center;gap:8px;margin:10px 0 4px;}
+  .checkline label{font-size:12px;color:var(--text);font-family:'IBM Plex Mono',monospace;}
+
+  .btn{
+    width:100%;padding:12px 14px;border-radius:var(--radius);border:none;
+    font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:13px;
+    letter-spacing:0.03em;cursor:pointer;transition:transform .1s, opacity .15s;
+  }
+  .btn:active{transform:scale(0.98);}
+  .btn:disabled{opacity:0.4;cursor:not-allowed;}
+  .btn-primary{background:var(--amber);color:#1a1300;}
+  .btn-primary:hover:not(:disabled){opacity:0.9;}
+  .btn-ghost{background:transparent;border:1px solid var(--line);color:var(--text);margin-top:8px;}
+  .btn-ghost:hover:not(:disabled){border-color:var(--cyan);color:var(--cyan);}
+
+  .progwrap{margin-top:14px;}
+  .progbar{height:6px;background:var(--panel-2);border-radius:3px;overflow:hidden;border:1px solid var(--line);}
+  .progfill{height:100%;width:0%;background:linear-gradient(90deg,var(--amber),var(--cyan));transition:width .12s;}
+  .progtext{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);margin-top:6px;}
+
+  /* stage / scope preview */
+  .scope{
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:14px;position:relative;
+  }
+  .scope-label{
+    position:absolute;top:14px;left:18px;font-family:'IBM Plex Mono',monospace;
+    font-size:10px;letter-spacing:0.14em;color:var(--muted);text-transform:uppercase;
+    z-index:2;
+  }
+  .scope canvas{
+    width:100%;height:auto;display:block;background:#000;border-radius:2px;
+    image-rendering:auto;
+  }
+  .scope-empty{
+    aspect-ratio:16/7;display:flex;align-items:center;justify-content:center;
+    color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:12px;
+    background:
+      repeating-linear-gradient(0deg, transparent, transparent 23px, rgba(255,255,255,0.025) 23px, rgba(255,255,255,0.025) 24px),
+      repeating-linear-gradient(90deg, transparent, transparent 23px, rgba(255,255,255,0.025) 23px, rgba(255,255,255,0.025) 24px);
+    border-radius:2px;
+  }
+
+  .readout{
+    display:flex;gap:22px;margin-top:10px;font-family:'IBM Plex Mono',monospace;font-size:12px;
+    color:var(--muted);flex-wrap:wrap;
+  }
+  .readout b{color:var(--amber);font-weight:600;}
+  .readout b.cy{color:var(--cyan);}
+
+  .logpanel{
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    flex:1;min-height:220px;display:flex;flex-direction:column;
+  }
+  .logpanel .scope-label{position:static;padding:12px 14px 0;}
+  #log{
+    flex:1;overflow-y:auto;padding:10px 14px 14px;
+    font-family:'IBM Plex Mono',monospace;font-size:11.5px;line-height:1.6;
+    color:#B9C1C9;white-space:pre-wrap;
+  }
+  #log .err{color:var(--red);}
+  #log .warn{color:var(--amber);}
+  #log .ok{color:var(--cyan);}
+
+  .downloadlist{display:flex;flex-direction:column;gap:8px;}
+  .downloadbar{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    background:var(--panel-2);border:1px solid var(--cyan);border-radius:var(--radius);
+    padding:12px 14px;
+    animation:slidein .18s ease-out;
+  }
+  @keyframes slidein{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:translateY(0);}}
+  .downloadbar span{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--cyan);}
+  .downloadbar .dl-actions{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+  .downloadbar a{
+    background:var(--cyan);color:#052421;text-decoration:none;font-weight:600;
+    padding:8px 14px;border-radius:var(--radius);font-family:'Space Grotesk',sans-serif;font-size:12.5px;
+    white-space:nowrap;
+  }
+  .downloadbar .dl-remove{
+    background:transparent;border:1px solid var(--line);color:var(--muted);
+    padding:8px 10px;border-radius:var(--radius);cursor:pointer;font-size:12px;
+    font-family:'IBM Plex Mono',monospace;
+  }
+  .downloadbar .dl-remove:hover{border-color:var(--red);color:var(--red);}
+
+  .hint{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6;}
+  .hint code{color:var(--text);}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>OM <span>&times;</span> ECHEM — <span id="appTitle">同步影片產生器</span></h1>
+  <div class="header-right">
+    <select class="language-select" id="languageSelect" aria-label="Language"><option value="zh-TW">繁體中文</option><option value="en">English</option></select>
+    <button class="verbadge" id="versionBadge" data-version="1.6.0" title="查看版本歷程">📜 v1.6.0</button>
+    <div class="status"><span class="dot" id="statusDot"></span><span id="statusText" data-i18n="statusIdle">待輸入</span></div>
+  </div>
+</header>
+
+<main>
+  <!-- LEFT RAIL: controls -->
+  <div class="rail">
+
+    <div class="step">
+      <span class="step-num" data-i18n="stepInput">01 / 輸入</span>
+      <h2 data-i18n="inputHeading">圖片與電化學資料</h2>
+
+      <div class="field">
+        <label data-i18n="imageLabel">OM 圖片（選取資料夾內所有圖檔）</label>
+        <label class="filebtn">
+          <span data-i18n="chooseImages">📁 選擇圖片檔案…</span>
+          <input type="file" id="imgInput" multiple accept="image/*">
+        </label>
+        <div class="filesummary" id="imgSummary"></div>
+      </div>
+
+      <div class="field">
+        <label data-i18n="echemLabel">GCPL 電化學資料（選填）</label>
+        <label class="filebtn">
+          <span data-i18n="chooseEchem">📄 選擇 txt 檔…</span>
+          <input type="file" id="echemInput" accept=".txt,.csv,.tsv,text/plain">
+        </label>
+        <div class="filesummary" id="echemSummary"></div>
+      </div>
+
+      <div class="hint" data-i18n-html="filenameHint">圖片檔名結尾的連續數字會被當作「第幾分鐘」，例如 <code>OM_frame_23.jpg</code> → 23 分鐘。</div>
+    </div>
+
+    <div class="step">
+      <span class="step-num" data-i18n="stepFields">02 / 欄位</span>
+      <h2 data-i18n="fieldsHeading">電化學欄位（僅在上傳 ECHEM 時使用）</h2>
+      <div class="field">
+        <label data-i18n="timeColumn">時間欄名稱</label>
+        <input type="text" id="colTime" placeholder="自動偵測 (例如 time/h)">
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label data-i18n="voltageColumn">電壓欄名稱</label>
+          <input type="text" id="colVolt" placeholder="自動偵測 (Ewe/V)">
+        </div>
+        <div class="field">
+          <label data-i18n="currentColumn">電流欄名稱</label>
+          <input type="text" id="colCurr" placeholder="自動偵測 (I/mA)">
+        </div>
+      </div>
+      <div class="field">
+        <label data-i18n="timeUnit">時間欄單位</label>
+        <select id="timeUnit">
+          <option value="h" data-i18n="hours">小時 (h)</option>
+          <option value="min" data-i18n="minutes">分鐘 (min)</option>
+          <option value="s" data-i18n="seconds">秒 (s)</option>
+        </select>
+      </div>
+      <div class="checkline">
+        <input type="checkbox" id="showCurrent" checked>
+        <label for="showCurrent" data-i18n="showCurrent">同時顯示電流曲線</label>
+      </div>
+    </div>
+
+    <div class="step">
+      <span class="step-num" data-i18n="stepCompose">03 / 同步與畫面</span>
+      <h2 data-i18n="composeHeading">同步、圖片與標註</h2>
+      <div class="row2">
+        <div class="field"><label data-i18n="imageOffset">OM 時間偏移 (min)</label><input type="number" id="imageOffset" value="0" step="0.1"></div>
+        <div class="field"><label data-i18n="echemOffset">ECHEM 時間偏移 (min)</label><input type="number" id="echemOffset" value="0" step="0.1"></div>
+      </div>
+      <div class="field"><label data-i18n="fitMode">圖片顯示方式</label><select id="fitMode"><option value="contain" data-i18n="fit">Fit（完整顯示）</option><option value="cover" data-i18n="fill">Fill（填滿裁切）</option></select></div>
+      <div class="row2">
+        <div class="field"><label data-i18n="visualMode">影像模式</label><select id="visualMode"><option value="original" data-i18n="originalMode">原始影像</option><option value="difference" data-i18n="differenceMode">相對第一張差分</option></select></div>
+        <div class="field"><label data-i18n="differenceGain">差異增益</label><input type="number" id="differenceGain" value="4" min="1" max="20" step="0.5"></div>
+      </div>
+      <div class="checkline"><input type="checkbox" id="showScaleBar"><label for="showScaleBar" data-i18n="showScaleBar">另外疊加尺標</label></div>
+      <div class="row2">
+        <div class="field"><label data-i18n="scaleLabel">尺標文字</label><input type="text" id="scaleLabel" value="100 µm"></div>
+        <div class="field"><label data-i18n="scaleLength">尺標長度 (px)</label><input type="number" id="scaleLength" value="120" min="10" max="1000" step="1"></div>
+      </div>
+      <div class="field"><label data-i18n="scaleThickness">尺標粗細 (px)</label><input type="number" id="scaleThickness" value="6" min="1" max="30" step="1"></div>
+      <div class="hint" data-i18n="differenceHint">差分顏色代表像素相對第一張發生變化；樣品位移、焦距、照明與曝光改變也會產生差分訊號。</div>
+      <div class="field"><label data-i18n="sampleName">Sample name／自訂標註</label><input type="text" id="sampleName" placeholder="例如 400 MPa / Sample A"></div>
+      <div class="checkline"><input type="checkbox" id="showTime" checked><label for="showTime" data-i18n="showTime">顯示時間標籤</label></div>
+      <button class="btn btn-ghost" id="previewBtn" disabled data-i18n="preview">更新預覽</button>
+      <div class="field" style="margin-top:12px"><label data-i18n="previewFrame">預覽圖片</label><input type="range" id="previewSlider" value="0" min="0" max="0" step="1" disabled></div>
+    </div>
+
+    <div class="step">
+      <span class="step-num" data-i18n="stepOutput">04 / 輸出</span>
+      <h2 data-i18n="outputHeading">影片參數</h2>
+      <div class="row2">
+        <div class="field">
+          <label>FPS</label>
+          <input type="number" id="fps" value="8" min="1" max="30" step="1">
+        </div>
+        <div class="field">
+          <label data-i18n="height">畫面高度 (px)</label>
+          <input type="number" id="outH" value="480" min="240" max="1080" step="10">
+        </div>
+      </div>
+      <div class="field">
+        <label data-i18n="duration">每張圖片顯示時間（秒）</label>
+        <input type="number" id="frameDuration" value="0.5" min="0.1" max="60" step="0.1">
+      </div>
+
+      <button class="btn btn-primary" id="genBtn" disabled data-i18n="generate">產生影片</button>
+      <button class="btn btn-ghost" id="cancelBtn" disabled data-i18n="cancel">取消產生</button>
+      <button class="btn btn-ghost" id="resetBtn" data-i18n="reset">重設</button>
+
+      <div class="progwrap">
+        <div class="progbar"><div class="progfill" id="progFill"></div></div>
+        <div class="progtext" id="progText" data-i18n="notStarted">尚未開始</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT STAGE: preview + log -->
+  <div class="stage">
+
+    <div class="scope">
+      <span class="scope-label">Live Preview</span>
+      <div id="scopeEmpty" class="scope-empty" data-i18n="previewEmpty">選好檔案並按「產生影片」後，這裡會即時顯示合成畫面</div>
+      <canvas id="stageCanvas" style="display:none;"></canvas>
+      <div class="readout" id="readout"></div>
+    </div>
+
+    <div class="downloadlist" id="downloadList"></div>
+
+    <div class="logpanel">
+      <span class="scope-label">Log</span>
+      <div id="log" class="mono"></div>
+    </div>
+
+  </div>
+</main>
+
+<!-- 版本歷程 modal：工具內建更新日誌，不只靠檔名，一打開就能查 -->
+<div class="modal-overlay" id="changelogOverlay">
+  <div class="modal-box">
+    <div class="modal-head">
+      <span data-i18n="changelog">版本歷程 / Changelog</span>
+      <button class="modal-close" id="changelogClose">✕</button>
+    </div>
+    <div class="modal-body" id="changelogBody"></div>
+  </div>
+</div>
+
+<!--
+  版號來源說明：本檔名（om_echem_video_web_v1.6.0.html）、上方 📜 版本徽章、
+  以及下面 changelogData 的最新一筆版號，三者必須一致。
+  加版規則：修 bug → 修訂版號 (x.x.N)；加功能 → 次版號 (x.N.0)；架構重寫 → 主版號 (N.0.0)。
+-->
+<script type="application/json" id="changelogData">
+[
+  {
+    "version": "1.6.0",
+    "date": "2026-09-12",
+    "notes": ["新增儀器日期時間格式自動辨識，例如 09/11/2026 22:00:42.3394", "日期時間會以第一筆為零點，自動轉換成經過時間", "改善科學記號、Unicode 負號與文字數值的解析相容性"],
+    "notesEn": ["Added automatic parsing of instrument date-time values such as 09/11/2026 22:00:42.3394", "Date-time data is converted to elapsed time from the first valid row", "Improved parsing of scientific notation, Unicode minus signs, and numeric strings"]
+  },
+  {
+    "version": "1.5.0",
+    "date": "2026-09-12",
+    "notes": ["新增獨立尺標疊加功能，尺標不參與影像差分", "可自訂尺標文字、畫面長度與粗細", "尺標固定顯示於 OM 畫面右下角並同步輸出至預覽與影片"],
+    "notesEn": ["Added an independent scale-bar overlay that is not included in image subtraction", "Added editable scale label, on-screen length, and thickness", "The scale bar is placed at the lower-right of the OM panel in both preview and video output"]
+  },
+  {
+    "version": "1.4.0",
+    "date": "2026-09-12",
+    "notes": ["新增相對第一張影像的絕對差分模式", "新增 1×–20× 差異增益，協助觀察細微變化", "差分模式同步支援時間軸預覽與正式影片輸出"],
+    "notesEn": ["Added absolute-difference mode relative to the first image", "Added 1×–20× difference gain for subtle changes", "Difference mode works in both timeline preview and final video output"]
+  },
+  {
+    "version": "1.3.0",
+    "date": "2026-09-12",
+    "notes": ["新增可拖曳的產生前預覽時間軸與即時畫面預覽", "新增 OM／ECHEM 獨立時間偏移校正", "新增 Fit／Fill 圖片模式、自訂標註與時間顯示開關", "新增取消產生、影片長度估算及重複時間檢查"],
+    "notesEn": ["Added a scrubber and live pre-generation frame preview", "Added independent OM and ECHEM time offsets", "Added Fit/Fill image modes, custom annotation, and time-label control", "Added cancellation, duration estimates, and duplicate-time validation"]
+  },
+  {
+    "version": "1.2.0",
+    "date": "2026-09-12",
+    "notes": [
+      "新增繁體中文／英文即時切換，涵蓋介面、狀態、進度、提示與常用訊息",
+      "語言選擇會儲存在瀏覽器中，下次開啟時自動套用"
+    ],
+    "notesEn": [
+      "Added instant Traditional Chinese/English switching for the interface, status, progress, hints, and common messages",
+      "The selected language is saved in the browser and restored the next time the app opens"
+    ]
+  },
+  {
+    "version": "1.1.0",
+    "date": "2026-09-12",
+    "notes": [
+      "新增純圖片模式：未上傳 ECHEM 資料時，也能依檔名時間排序產生 OM time-lapse 影片",
+      "ECHEM 資料改為選填；上傳時仍保留圖片、電壓／電流曲線與游標同步功能",
+      "新增每張圖片顯示時間設定，可直接控制輸出影片長度"
+    ],
+    "notesEn": [
+      "Added image-only mode for creating OM time-lapse videos without ECHEM data",
+      "Made ECHEM optional while retaining synchronized curves and cursor when data is supplied",
+      "Added display duration per image to control total video length"
+    ]
+  },
+  {
+    "version": "1.0.0",
+    "date": "2026-08-24",
+    "notes": [
+      "架構重寫：原本單一 HTML 拆成兩個模組——echem.js（電化學資料解析／欄位偵測／時間單位換算／曲線繪製）與 om-video.js（圖片載入／畫面合成／MediaRecorder 錄影／下載清單），HTML 只保留介面外殼",
+      "導入檔名版號規則（工具名稱_v主.次.修訂[-變體].副檔名）與本更新日誌面板，之後每次交付都會在這裡留紀錄"
+    ],
+    "notesEn": [
+      "Split the original single HTML file into ECHEM and OM/video modules with an HTML interface shell",
+      "Introduced versioned filenames and the built-in changelog panel"
+    ]
+  }
+]
+</script>
+
+<!--
+  程式邏輯已拆成兩個獨立檔案，方便分別維護／客製化：
+    1. echem_v1.6.0.js    — 電化學資料解析、日期時間／數值時間辨識、欄位偵測與曲線繪製
+    2. om-video_v1.6.0.js — 圖片載入、差分與尺標疊加、同步預覽、畫面合成與 MediaRecorder 錄影
+                             （有 ECHEM 資料時會呼叫 echem_v1.6.0.js 提供的 window.EchemModule）
+  請將這三個檔案放在同一個資料夾，且保持檔名一致（含版號），直接用瀏覽器開啟本檔案即可運作。
+  之後升版時，三個檔名的版號要一起改，並在 changelogData 補上新的一筆。
+-->
+<script src="echem_v1.6.0.js"></script>
+<script src="om-video_v1.6.0.js"></script>
+</body>
+</html>
