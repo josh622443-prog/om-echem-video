@@ -2,13 +2,13 @@ cff-version: 1.2.0
 message: "If you use this software in your research, presentation, or publication, please cite it as below."
 type: software
 title: "OM × ECHEM Video Generator"
-version: 1.6.0
+version: 1.6.1
 date-released: 2026-09-12
 authors:
   - family-names: "King"
     given-names: "Kuo-Feng"
     affiliation: "University of Houston — Yan Yao and Lihong Zhao Laboratories"
     email: "kking20@cougarnet.uh.edu"
-license: MIT
+license: PolyForm-Noncommercial-1.0.0
 repository-code: "https://github.com/josh622443-prog/om-echem-video"
 url: "https://github.com/josh622443-prog/om-echem-video"
