@@ -6,4 +6,4 @@ A related manuscript is currently in preparation. This file and `CITATION.cff` w
 
 Suggested acknowledgement:
 
-> Synchronized optical microscopy and electrochemical videos were generated using OM × ECHEM Video Generator (Kuo-Feng King, version 1.6.0).
+> Synchronized optical microscopy and electrochemical videos were generated using OM × ECHEM Video Generator (Kuo-Feng King, version 1.6.1).
