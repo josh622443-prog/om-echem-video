@@ -1,0 +1,21 @@
+OM × ECHEM Video Generator Noncommercial License
+Copyright (c) 2026 Kuo-Feng King. All rights reserved.
+
+Permission is granted to use, copy, and modify this software solely for personal,
+academic, educational, and noncommercial research purposes, provided that this
+copyright notice and license are retained with all copies or substantial portions.
+
+Commercial use, sale, sublicensing for commercial purposes, incorporation into a
+commercial product or service, or use primarily intended for commercial advantage
+or monetary compensation is prohibited without prior written permission from the
+copyright holder.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE COPYRIGHT
+HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY ARISING FROM, OUT OF,
+OR IN CONNECTION WITH THE SOFTWARE OR ITS USE.
+
+This is a source-available, noncommercial license and is not an OSI-approved
+open-source license.
+

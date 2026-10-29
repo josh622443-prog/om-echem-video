@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OM × ECHEM — Video Generator v1.28.0</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+  :root{
+    --ink:#0E1113;
+    --panel:#171B1F;
+    --panel-2:#1D2227;
+    --line:#2A3036;
+    --text:#E8ECEF;
+    --muted:#8A94A0;
+    --amber:#FFB454;
+    --cyan:#57D9C4;
+    --red:#FF6B6B;
+    --radius:3px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--ink);color:var(--text);
+    font-family:'Space Grotesk',system-ui,sans-serif;}
+  ::selection{background:var(--amber);color:var(--ink);}
+
+  .mono{font-family:'IBM Plex Mono',monospace;}
+
+  header{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:18px 28px;border-bottom:1px solid var(--line);
+    background:
+      repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(255,255,255,0.02) 39px, rgba(255,255,255,0.02) 40px);
+  }
+  header h1{
+    font-size:16px;font-weight:600;letter-spacing:0.08em;margin:0;
+    text-transform:uppercase;
+  }
+  header h1 span{color:var(--amber);}
+  .header-right{display:flex;align-items:center;gap:14px;}
+  .language-select{background:var(--panel-2);border:1px solid var(--line);color:var(--text);padding:5px 8px;border-radius:var(--radius);font-family:'IBM Plex Mono',monospace;font-size:11px;}
+  .verbadge{
+    display:inline-flex;align-items:center;gap:6px;
+    background:var(--panel-2);border:1px solid var(--line);color:var(--cyan);
+    font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.04em;
+    padding:5px 10px;border-radius:var(--radius);cursor:pointer;
+  }
+  .verbadge:hover{border-color:var(--cyan);}
+  .status{
+    display:flex;align-items:center;gap:8px;
+    font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);
+  }
+
+  /* changelog modal */
+  .modal-overlay{
+    display:none;position:fixed;inset:0;background:rgba(6,8,10,0.72);
+    z-index:100;align-items:center;justify-content:center;padding:24px;
+  }
+  .modal-overlay.open{display:flex;}
+  .modal-box{
+    width:100%;max-width:480px;max-height:80vh;display:flex;flex-direction:column;
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    box-shadow:0 12px 40px rgba(0,0,0,0.5);
+  }
+  .modal-head{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 18px;border-bottom:1px solid var(--line);
+    font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:0.1em;
+    text-transform:uppercase;color:var(--muted);
+  }
+  .modal-close{
+    background:transparent;border:1px solid var(--line);color:var(--muted);
+    padding:4px 9px;border-radius:var(--radius);cursor:pointer;font-size:12px;
+  }
+  .modal-close:hover{border-color:var(--red);color:var(--red);}
+  .modal-body{overflow-y:auto;padding:16px 18px;}
+  .changelog-entry{margin-bottom:16px;}
+  .changelog-entry:last-child{margin-bottom:0;}
+  .changelog-entry .cl-head{
+    display:flex;align-items:baseline;gap:10px;margin-bottom:6px;
+  }
+  .changelog-entry .cl-ver{
+    font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:14px;color:var(--amber);
+  }
+  .changelog-entry .cl-date{
+    font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);
+  }
+  .changelog-entry ul{margin:0;padding-left:18px;}
+  .changelog-entry li{font-size:12.5px;line-height:1.7;color:var(--text);}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--muted);
+    box-shadow:0 0 0 3px rgba(255,255,255,0.05);}
+  .dot.ready{background:var(--cyan);}
+  .dot.busy{background:var(--amber);animation:pulse 1.1s ease-in-out infinite;}
+  .dot.err{background:var(--red);}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.35;}}
+
+  main{
+    display:grid;grid-template-columns:360px 1fr;gap:0;
+    min-height:calc(100vh - 61px);
+  }
+  @media (max-width:920px){
+    main{grid-template-columns:1fr;}
+  }
+
+  .rail{border-right:1px solid var(--line);padding:16px 20px;overflow-y:auto;align-self:start;height:calc(100vh - 61px);}
+  .workflow-nav{position:sticky;top:-16px;z-index:5;background:var(--panel);padding:12px 0 10px;margin:-12px 0 16px;border-bottom:1px solid var(--line);}
+  .workflow-nav label{display:block;font:11px 'IBM Plex Mono',monospace;color:var(--amber);margin-bottom:6px;}
+  .workflow-nav .shortcut-hint{margin-top:7px;color:var(--muted);font:11px 'IBM Plex Mono',monospace;}
+  .workflow-nav select{width:100%;background:var(--panel-2);border:1px solid var(--cyan);border-radius:var(--radius);color:var(--text);padding:10px;font:13px 'IBM Plex Mono',monospace;}
+  .workflow-nested-nav{display:none;}
+  .step[hidden]{display:none;}
+  .coverage-output{padding:18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);}
+  .coverage-output[hidden]{display:none;}
+  @media (max-width:920px){.rail{height:auto;overflow:visible;border-right:0;border-bottom:1px solid var(--line);}.workflow-nav{top:0;}}
+  .stage{padding:24px;display:flex;flex-direction:column;gap:18px;}
+
+  .step{margin-bottom:28px;}
+  .step-num{
+    font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--amber);
+    letter-spacing:0.12em;display:block;margin-bottom:4px;
+  }
+  .step h2{font-size:14px;margin:0 0 12px;font-weight:600;letter-spacing:0.02em;}
+
+  .field{margin-bottom:12px;}
+  .field label{
+    display:block;font-size:11px;color:var(--muted);margin-bottom:5px;
+    font-family:'IBM Plex Mono',monospace;letter-spacing:0.02em;
+  }
+  .field input[type="text"], .field input[type="number"], .field select{
+    width:100%;background:var(--panel-2);border:1px solid var(--line);
+    color:var(--text);padding:8px 10px;border-radius:var(--radius);
+    font-family:'IBM Plex Mono',monospace;font-size:12.5px;
+  }
+  .field input[type="text"]::placeholder{color:#586068;}
+  .field input:focus, .field select:focus{outline:1px solid var(--amber);border-color:var(--amber);}
+
+  .filebtn{
+    display:flex;align-items:center;gap:10px;width:100%;
+    background:var(--panel-2);border:1px dashed var(--line);
+    color:var(--text);padding:10px 12px;border-radius:var(--radius);
+    cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:12px;
+    transition:border-color .15s;
+  }
+  .filebtn:hover{border-color:var(--amber);}
+  .filebtn input{display:none;}
+  .filesummary{margin-top:6px;font-size:11.5px;color:var(--cyan);font-family:'IBM Plex Mono',monospace;
+    min-height:14px;}
+  .filesummary.warn{color:var(--red);}
+
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+
+  .range-number{display:grid;grid-template-columns:minmax(0,1fr) 88px;gap:10px;align-items:center;}
+  .range-number input[type="range"]{width:100%;accent-color:var(--amber);}
+  .range-number input[type="number"]{text-align:right;}
+  .preview-scrubber{margin-top:14px;padding-top:12px;border-top:1px solid var(--line);width:100%;}
+  .preview-scrubber input[type="range"]{display:block;width:100%;height:28px;accent-color:var(--amber);cursor:grab;}
+  .preview-scrubber input[type="range"]:active{cursor:grabbing;}
+  .preview-tabs{display:flex;gap:8px;margin:20px 0 10px;}
+  .preview-tab{flex:1;padding:8px 12px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel-2);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:11.5px;cursor:pointer;}
+  .preview-tab:hover{border-color:var(--cyan);color:var(--text);}
+  .preview-tab.active{border-color:var(--amber);background:rgba(255,180,84,.12);color:var(--amber);}
+  .settings-tabs{display:flex;gap:8px;margin:4px 0 16px;}
+  .settings-tab{flex:1;padding:9px 10px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel-2);color:var(--muted);font-family:'IBM Plex Mono',monospace;cursor:pointer;}
+  .settings-tab.active{border-color:var(--cyan);color:var(--cyan);background:rgba(87,217,196,.10);}
+  .settings-panel[hidden]{display:none;}
+  .roi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;}
+  .alignment-readout{margin-top:10px;padding:10px;border:1px solid var(--line);border-radius:var(--radius);color:var(--cyan);font-family:'IBM Plex Mono',monospace;font-size:12px;}
+  .calibration-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0;}
+  .calibration-status{padding:10px;border:1px solid var(--line);border-radius:var(--radius);color:var(--cyan);font-family:'IBM Plex Mono',monospace;font-size:12px;line-height:1.5;}
+  .scope.scale-picking canvas{cursor:crosshair;}
+  .scope.roi-picking canvas{cursor:crosshair;}
+  .scope.roi-editing canvas{cursor:move;touch-action:none;}
+  .btn[aria-pressed="true"]{border-color:var(--cyan);color:var(--cyan);background:rgba(87,217,196,.12);}
+
+  .checkline{display:flex;align-items:center;gap:8px;margin:10px 0 4px;}
+  .checkline label{font-size:12px;color:var(--text);font-family:'IBM Plex Mono',monospace;}
+
+  .btn{
+    width:100%;padding:12px 14px;border-radius:var(--radius);border:none;
+    font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:13px;
+    letter-spacing:0.03em;cursor:pointer;transition:transform .1s, opacity .15s;
+  }
+  .btn:active{transform:scale(0.98);}
+  .btn:disabled{opacity:0.4;cursor:not-allowed;}
+  .btn-primary{background:var(--amber);color:#1a1300;}
+  .btn-primary:hover:not(:disabled){opacity:0.9;}
+  .btn-ghost{background:transparent;border:1px solid var(--line);color:var(--text);margin-top:8px;}
+  .btn-ghost:hover:not(:disabled){border-color:var(--cyan);color:var(--cyan);}
+
+  .progwrap{margin-top:14px;}
+  .progbar{height:6px;background:var(--panel-2);border-radius:3px;overflow:hidden;border:1px solid var(--line);}
+  .progfill{height:100%;width:0%;background:linear-gradient(90deg,var(--amber),var(--cyan));transition:width .12s;}
+  .progtext{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);margin-top:6px;}
+
+  /* stage / scope preview */
+  .scope{
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:14px;position:relative;
+  }
+  .scope-label{
+    position:absolute;top:14px;left:18px;font-family:'IBM Plex Mono',monospace;
+    font-size:10px;letter-spacing:0.14em;color:var(--muted);text-transform:uppercase;
+    z-index:2;
+  }
+  .scope canvas{
+    width:100%;height:auto;display:block;background:#000;border-radius:2px;
+    image-rendering:auto;
+  }
+  .scope-empty{
+    aspect-ratio:16/7;display:flex;align-items:center;justify-content:center;
+    color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:12px;
+    background:
+      repeating-linear-gradient(0deg, transparent, transparent 23px, rgba(255,255,255,0.025) 23px, rgba(255,255,255,0.025) 24px),
+      repeating-linear-gradient(90deg, transparent, transparent 23px, rgba(255,255,255,0.025) 23px, rgba(255,255,255,0.025) 24px);
+    border-radius:2px;
+  }
+
+  .readout{
+    display:flex;gap:22px;margin-top:10px;font-family:'IBM Plex Mono',monospace;font-size:12px;
+    color:var(--muted);flex-wrap:wrap;
+  }
+  .readout b{color:var(--amber);font-weight:600;}
+  .readout b.cy{color:var(--cyan);}
+
+  .logpanel{
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    flex:1;min-height:220px;display:flex;flex-direction:column;
+  }
+  .logpanel .scope-label{position:static;padding:12px 14px 0;}
+  #log{
+    flex:1;overflow-y:auto;padding:10px 14px 14px;
+    font-family:'IBM Plex Mono',monospace;font-size:11.5px;line-height:1.6;
+    color:#B9C1C9;white-space:pre-wrap;
+  }
+  #log .err{color:var(--red);}
+  #log .warn{color:var(--amber);}
+  #log .ok{color:var(--cyan);}
+
+  .downloadlist{display:flex;flex-direction:column;gap:8px;}
+  .downloadbar{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    background:var(--panel-2);border:1px solid var(--cyan);border-radius:var(--radius);
+    padding:12px 14px;
+    animation:slidein .18s ease-out;
+  }
+  @keyframes slidein{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:translateY(0);}}
+  .downloadbar span{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--cyan);}
+  .downloadbar .dl-actions{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+  .downloadbar a{
+    background:var(--cyan);color:#052421;text-decoration:none;font-weight:600;
+    padding:8px 14px;border-radius:var(--radius);font-family:'Space Grotesk',sans-serif;font-size:12.5px;
+    white-space:nowrap;
+  }
+  .downloadbar .dl-remove{
+    background:transparent;border:1px solid var(--line);color:var(--muted);
+    padding:8px 10px;border-radius:var(--radius);cursor:pointer;font-size:12px;
+    font-family:'IBM Plex Mono',monospace;
+  }
+  .downloadbar .dl-remove:hover{border-color:var(--red);color:var(--red);}
+
+  .hint{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6;}
+  .hint code{color:var(--text);}
+  .duration-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:stretch;margin-bottom:12px}
+  .duration-row .field{margin-bottom:0;min-width:0}
+  .duration-estimate{border:1px solid var(--border,#30383e);border-radius:6px;padding:10px;background:rgba(94,219,193,.06);display:flex;flex-direction:column;justify-content:center;gap:5px;min-width:0}
+  .duration-estimate span{font-size:11px;color:var(--muted,#94a3b8)}
+  .duration-estimate strong{font-size:20px;color:var(--cyan,#60dac3);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+  .duration-estimate small{font-size:11px;color:var(--muted,#94a3b8);overflow-wrap:anywhere;line-height:1.5}
+  @media(max-width:380px){.duration-row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>OM <span>&times;</span> ECHEM — <span id="appTitle">同步影片產生器</span></h1>
+  <div class="header-right">
+    <select class="language-select" id="languageSelect" aria-label="Language"><option value="zh-TW">繁體中文</option><option value="en">English</option></select>
+    <button class="verbadge" id="versionBadge" data-version="1.28.0" title="查看版本歷程">📜 v1.28.0</button>
+    <div class="status"><span class="dot" id="statusDot"></span><span id="statusText" data-i18n="statusIdle">待輸入</span></div>
+  </div>
+</header>
+
+<main>
+  <!-- LEFT RAIL: controls -->
+  <div class="rail">
+    <div class="workflow-nav">
+      <label for="workflowSection" data-i18n="workflowSection">快速切換設定頁面</label>
+      <select id="workflowSection" aria-label="Settings page" aria-keyshortcuts="Q A">
+        <option value="input" data-i18n="workflowInput">01 / 圖片與資料</option>
+        <option value="fields" data-i18n="workflowFields">02 / 電化學欄位</option>
+        <option value="compose" data-i18n="workflowCompose">03 / 畫面與同步</option>
+        <option value="alignment" data-i18n="workflowAlignment">04 / 影像對齊</option>
+        <option value="scale" data-i18n="workflowScale">04 / 比例尺</option>
+        <option value="zoom" data-i18n="workflowZoom">04 / Zoom ROI</option>
+        <option value="coverage" data-i18n="workflowCoverage">04 / Li Coverage</option>
+        <option value="output" data-i18n="workflowOutput">05 / 影片輸出</option>
+      </select>
+      <div class="shortcut-hint" data-i18n="workflowShortcutHint">Q：上一頁　A：下一頁（輸入文字時不會觸發）</div>
+    </div>
+
+    <div class="step" data-workflow-panel="input">
+      <span class="step-num" data-i18n="stepInput">01 / 輸入</span>
+      <h2 data-i18n="inputHeading">圖片與電化學資料</h2>
+
+      <div class="field">
+        <label data-i18n="imageLabel">OM 圖片（選取資料夾內所有圖檔）</label>
+        <label class="filebtn">
+          <span data-i18n="chooseImages">📁 選擇圖片檔案…</span>
+          <input type="file" id="imgInput" multiple accept="image/*">
+        </label>
+        <label class="filebtn">
+          <span data-i18n="chooseImageFolder">📂 選擇圖片資料夾…</span>
+          <input type="file" id="folderInput" webkitdirectory multiple accept="image/*">
+        </label>
+        <div class="field"><label for="outputBaseName" data-i18n="outputBaseName">影片檔名（可修改）</label><input type="text" id="outputBaseName" placeholder="om_video" maxlength="120" autocomplete="off"></div>
+        <div class="hint" data-i18n="folderNameHint">選擇資料夾時會自動使用其名稱；直接選取圖片檔案時可自行填入名稱。</div>
+        <div class="filesummary" id="imgSummary"></div>
+      </div>
+
+      <div class="field">
+        <label data-i18n="echemLabel">GCPL 電化學資料（選填）</label>
+        <label class="filebtn">
+          <span data-i18n="chooseEchem">📄 選擇 txt 檔…</span>
+          <input type="file" id="echemInput" accept=".txt,.csv,.tsv,text/plain">
+        </label>
+        <div class="filesummary" id="echemSummary"></div>
+      </div>
+
+      <div class="hint" data-i18n-html="filenameHint">圖片檔名結尾的連續數字會被當作「第幾分鐘」，例如 <code>OM_frame_23.jpg</code> → 23 分鐘。</div>
+    </div>
+
+    <div class="step" data-workflow-panel="fields" hidden>
+      <span class="step-num" data-i18n="stepFields">02 / 欄位</span>
+      <h2 data-i18n="fieldsHeading">電化學欄位（僅在上傳 ECHEM 時使用）</h2>
+      <div class="field">
+        <label data-i18n="timeColumn">時間欄名稱</label>
+        <input type="text" id="colTime" placeholder="自動偵測 (例如 time/h)">
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label data-i18n="voltageColumn">電壓欄名稱</label>
+          <input type="text" id="colVolt" placeholder="自動偵測 (Ewe/V)">
+        </div>
+        <div class="field">
+          <label data-i18n="currentColumn">電流欄名稱</label>
+          <input type="text" id="colCurr" placeholder="自動偵測 (I/mA)">
+        </div>
+      </div>
+      <div class="field">
+        <label data-i18n="timeUnit">時間欄單位</label>
+        <select id="timeUnit">
+          <option value="h" data-i18n="hours">小時 (h)</option>
+          <option value="min" data-i18n="minutes">分鐘 (min)</option>
+          <option value="s" data-i18n="seconds">秒 (s)</option>
+        </select>
+      </div>
+      <div class="checkline">
+        <input type="checkbox" id="showCurrent" checked>
+        <label for="showCurrent" data-i18n="showCurrent">同時顯示電流曲線</label>
+      </div>
+    </div>
+
+    <div class="step" data-workflow-panel="compose" hidden>
+      <span class="step-num" data-i18n="stepCompose">03 / 同步與畫面</span>
+      <h2 data-i18n="composeHeading">同步、圖片與標註</h2>
+      <div class="row2">
+        <div class="field"><label data-i18n="imageOffset">OM 時間偏移 (min)</label><input type="number" id="imageOffset" value="0" step="0.1"></div>
+        <div class="field"><label data-i18n="echemOffset">ECHEM 時間偏移 (min)</label><input type="number" id="echemOffset" value="0" step="0.1"></div>
+      </div>
+      <div class="field"><label data-i18n="fitMode">圖片顯示方式</label><select id="fitMode"><option value="contain" data-i18n="fit">Fit（完整顯示）</option><option value="cover" data-i18n="fill">Fill（填滿裁切）</option></select></div>
+      <div class="field">
+        <label data-i18n="contrast">對比度 (%)</label>
+        <div class="range-number"><input type="range" id="contrastRange" value="100" min="0" max="300" step="0.01"><input type="number" id="contrastValue" value="100.00" min="0" max="300" step="0.01"></div>
+      </div>
+      <div class="field">
+        <label data-i18n="brightness">亮度 (%)</label>
+        <div class="range-number"><input type="range" id="brightnessRange" value="100" min="0" max="200" step="0.01"><input type="number" id="brightnessValue" value="100.00" min="0" max="200" step="0.01"></div>
+      </div>
+      <div class="field">
+        <label data-i18n="upscale">高品質插值放大</label>
+        <select id="upscaleFactor"><option value="1" data-i18n="upscale1">1×（原始輸出尺寸）</option><option value="2" data-i18n="upscale2">2×（增加插值像素）</option></select>
+        <div class="hint" data-i18n="upscaleHint">2× 會將輸出寬高各放大兩倍並使用高品質插值；檔案與記憶體需求也會增加。</div>
+      </div>
+      <div class="row2">
+        <div class="field"><label data-i18n="visualMode">輸出模式</label><select id="visualMode"><option value="both" data-i18n="bothMode" selected>原始＋差分（兩個影片）</option><option value="original" data-i18n="originalMode">僅原始影像</option><option value="difference" data-i18n="differenceMode">僅相對第一張差分</option></select></div>
+        <div class="field"><label data-i18n="differenceGain">差異增益</label><input type="number" id="differenceGain" value="4" min="1" max="20" step="0.5"></div>
+      </div>
+      <div class="hint" data-i18n="differenceHint">差分顏色代表像素相對第一張發生變化；樣品位移、焦距、照明與曝光改變也會產生差分訊號。</div>
+      <div class="field"><label data-i18n="sampleName">Sample name／自訂標註</label><input type="text" id="sampleName" placeholder="例如 400 MPa / Sample A"></div>
+      <div class="field"><label for="labelFontSize" data-i18n="labelFontSize">主圖標籤字體大小 (px)</label><input type="number" id="labelFontSize" value="18" min="8" max="48" step="1"></div>
+      <div class="checkline"><input type="checkbox" id="showTime" checked><label for="showTime" data-i18n="showTime">顯示時間標籤</label></div>
+      <button class="btn btn-ghost" id="previewBtn" disabled data-i18n="preview">更新預覽</button>
+    </div>
+
+    <div class="step" data-workflow-panel="tools" hidden>
+      <span class="step-num" data-i18n="stepAlign">04 / 對齊與比例尺</span>
+      <h2 data-i18n="alignScaleHeading">影像對齊與比例尺</h2>
+      <div class="field workflow-nested-nav">
+        <label for="settingsSection" data-i18n="settingsSection">設定工具</label>
+        <select id="settingsSection">
+          <option value="alignment" data-i18n="alignmentTab">影像對齊</option>
+          <option value="scale" data-i18n="scaleTab">插入比例尺</option>
+          <option value="zoom" data-i18n="zoomTab">Zoom ROI</option>
+          <option value="coverage" data-i18n="coverageTab">Li Coverage</option>
+        </select>
+      </div>
+      <div class="settings-panel" data-settings-panel="alignment">
+        <div class="checkline"><input type="checkbox" id="alignEnabled"><label for="alignEnabled" data-i18n="alignEnabled">對齊所有圖片至第一張</label></div>
+        <div class="field"><label data-i18n="maxShift">最大位移 (原始 pixel)</label><input type="number" id="maxShift" value="20" min="1" max="100" step="1"></div>
+        <label data-i18n="alignmentRoi">Alignment ROI（第一張影像的百分比）</label>
+        <div class="roi-grid">
+          <div class="field"><label>X (%)</label><input type="number" id="roiX" value="5" min="0" max="95" step="1"></div>
+          <div class="field"><label>Y (%)</label><input type="number" id="roiY" value="5" min="0" max="95" step="1"></div>
+          <div class="field"><label>W (%)</label><input type="number" id="roiW" value="70" min="5" max="100" step="1"></div>
+          <div class="field"><label>H (%)</label><input type="number" id="roiH" value="70" min="5" max="100" step="1"></div>
+        </div>
+        <div class="hint" data-i18n="alignmentHint">請選擇不會鍍鋰、紋理固定的區域，並避開右下角原始尺標、文字及生長中的 Li。只修正 X/Y 平移。</div>
+        <div class="alignment-readout" id="alignmentReadout" data-i18n="alignmentNotMeasured">尚未計算位移</div>
+      </div>
+      <div class="settings-panel" data-settings-panel="scale" hidden>
+        <div class="checkline"><input type="checkbox" id="showScaleBar"><label for="showScaleBar" data-i18n="showScaleBar">另外疊加比例尺</label></div>
+        <div class="calibration-actions">
+          <button class="btn btn-ghost" type="button" id="detectBlueScale" data-i18n="detectBlueScale">自動偵測第一張藍色尺標</button>
+          <button class="btn btn-ghost" type="button" id="pickScaleEndpoints" data-i18n="pickScaleEndpoints">在預覽點選尺標兩端</button>
+        </div>
+        <div class="calibration-status" id="scaleCalibrationStatus" data-i18n="scaleNotCalibrated">尚未校正；自動偵測或點選第一張圖片尺標兩端。</div>
+        <div class="row2">
+          <div class="field"><label data-i18n="scaleValue">比例尺數值</label><input type="number" id="scaleValue" value="100" min="0.01" max="1000000" step="0.01"></div>
+          <div class="field"><label data-i18n="scaleUnit">比例尺單位</label><select id="scaleUnit"><option value="nm">nm</option><option value="µm" selected>µm</option><option value="mm">mm</option><option value="cm">cm</option></select></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label data-i18n="scaleLength">比例尺長度 (px)</label><input type="number" id="scaleLength" value="120" min="10" max="1000" step="1"></div>
+          <div class="field"><label data-i18n="scaleThickness">比例尺粗細 (px)</label><input type="number" id="scaleThickness" value="6" min="1" max="30" step="1"></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label data-i18n="scalePosition">比例尺位置</label><select id="scalePosition"><option value="bottom-right" data-i18n="bottomRight">右下</option><option value="bottom-left" data-i18n="bottomLeft">左下</option><option value="top-right" data-i18n="topRight">右上</option><option value="top-left" data-i18n="topLeft">左上</option></select></div>
+          <div class="field"><label data-i18n="scaleColor">比例尺顏色</label><input type="color" id="scaleColor" value="#ffffff"></div>
+        </div>
+        <div class="hint" data-i18n="scaleHint">這是獨立疊加的比例尺，不會被納入相對第一張差分或影像對齊計算。</div>
+      </div>
+      <div class="settings-panel" data-settings-panel="zoom" hidden>
+        <div class="checkline"><input type="checkbox" id="roiZoomEnabled"><label for="roiZoomEnabled" data-i18n="roiZoomEnabled">在預覽與影片加入 ROI 放大視窗</label></div>
+        <div class="field"><label data-i18n="roiLayoutMode">ROI 版面配置</label><select id="roiLayoutMode"><option value="overlay" data-i18n="roiOverlayLayout">單一 ROI 疊加在原圖</option><option value="grid" data-i18n="roiGridLayout">多個 ROI 排列在右側</option></select></div>
+        <div class="calibration-actions">
+          <button class="btn btn-ghost" type="button" id="selectZoomRoi" data-i18n="selectZoomRoi">新增 ROI</button>
+          <button class="btn btn-ghost" type="button" id="removeLastZoomRoi" data-i18n="removeLastZoomRoi">刪除最後一個 ROI</button>
+        </div>
+        <button class="btn btn-ghost" type="button" id="clearZoomRois" data-i18n="clearZoomRois">清除全部 ROI</button>
+        <button class="btn btn-ghost" type="button" id="editZoomRois" aria-pressed="false" data-i18n="editZoomRois">在主圖移動／調整 ROI</button>
+        <div class="hint" data-i18n="roiKeyboardHint">編輯 ROI 時，方向鍵每次移動 1 個原圖像素；Shift＋方向鍵移動 10 個。多個 ROI 請先點選要移動的框。</div>
+        <div class="calibration-status" id="zoomRoiStatus" data-i18n="zoomRoiUnset">尚未選取 ROI。</div>
+        <div class="field"><label data-i18n="roiRenderMode">ROI 顯示模式</label><select id="roiRenderMode"><option value="match" data-i18n="roiMatchMain" selected>Match main image（與主畫面一致）</option><option value="source" data-i18n="roiSourceDetail">Source-resolution detail（原始解析細節）</option></select></div>
+        <div class="row2">
+          <div class="field"><label data-i18n="roiMagnification">ROI 放大倍率</label><input type="number" id="roiMagnification" value="3.00" min="1.25" max="8" step="0.25"></div>
+          <div class="field"><label data-i18n="roiInsetPosition">單一 ROI 位置</label><select id="roiInsetPosition"><option value="top-right" data-i18n="topRight">右上</option><option value="top-left" data-i18n="topLeft">左上</option><option value="bottom-right" data-i18n="bottomRight">右下</option><option value="bottom-left" data-i18n="bottomLeft">左下</option></select></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label data-i18n="roiBorderColor">ROI 邊框顏色</label><input type="color" id="roiBorderColor" value="#57d9c4"></div>
+          <div class="checkline"><input type="checkbox" id="showRoiSourceBox"><label for="showRoiSourceBox" data-i18n="showRoiSourceBox">顯示原始 ROI 方框</label></div>
+        </div>
+        <div class="checkline"><input type="checkbox" id="showRoiScaleBar" checked><label for="showRoiScaleBar" data-i18n="showRoiScaleBar">在 ROI 顯示校正比例尺</label></div>
+        <div class="hint" data-i18n="roiScaleBarHint">ROI 尺標沿用主畫面的校正比例，並依實際放大倍率換算；空間不足時會自動改用較短的等比例尺標。</div>
+        <div class="hint" data-i18n="roiZoomHint">ROI 直接由每張原始圖片重新取樣；啟用影像對齊時，放大視窗會追蹤同一個固定位置。</div>
+      </div>
+      <div class="settings-panel" data-settings-panel="coverage" hidden>
+        <div class="hint" data-i18n="coverageDisclaimer">以第一張影像為基準量化 optical-change coverage；結果不應單獨視為 Li 的化學鑑定。</div>
+        <div class="row2">
+          <div class="field"><label data-i18n="coverageRegionShape">分析區域形狀</label><select id="coverageRegionShape"><option value="rect" data-i18n="coverageRect">矩形</option><option value="circle" data-i18n="coverageCircle">圓形／橢圓形</option></select></div>
+          <div class="field"><label data-i18n="coverageRegion">Coverage analysis region</label><div class="calibration-actions"><button class="btn btn-ghost" type="button" id="selectCoverageRegion" data-i18n="selectCoverageRegion">在第一張圖拖曳選取</button><button class="btn btn-ghost" type="button" id="clearCoverageRegion" data-i18n="clearCoverageRegion">清除</button></div></div>
+        </div>
+        <div class="calibration-status" id="coverageRegionStatus" data-i18n="coverageRegionUnset">尚未選取分析區域。</div>
+        <div class="row2">
+          <div class="field"><label for="coverageRegionDiameter" data-i18n="coverageRegionDiameter">分析區域等效直徑</label><div class="row2"><input type="number" id="coverageRegionDiameter" min="0.01" step="any" disabled aria-describedby="coverageDiameterHint"><select id="coverageRegionDiameterUnit" aria-label="Diameter unit"><option value="px">px</option><option value="nm">nm</option><option value="µm">µm</option><option value="mm">mm</option><option value="cm">cm</option></select></div></div>
+          <div class="field"><label for="coverageRegionAreaReadout" data-i18n="coverageRegionArea">框選分析面積</label><input type="text" id="coverageRegionAreaReadout" value="—" readonly></div>
+        </div>
+        <div class="hint" id="coverageDiameterHint" data-i18n="coverageDiameterHint">等效直徑指相同面積圓的直徑。輸入數值會以中心為基準等比例縮放框選；實際面積須先校正比例尺。這與下方用來換算電流的電極直徑不同。</div>
+        <button class="btn btn-ghost" type="button" id="editCoverageRegion" aria-pressed="false" data-i18n="editCoverageRegion">在主圖移動／調整分析區域</button>
+        <div class="hint" data-i18n="roiKeyboardHint">編輯 ROI 時，方向鍵每次移動 1 個原圖像素；Shift＋方向鍵移動 10 個。多個 ROI 請先點選要移動的框。</div>
+        <div class="hint" data-i18n="roiEditHint">按下編輯後拖曳區域內部可移動、拖曳四角可調整尺寸；修改分析區域或 ROI 後請重新執行 Coverage 分析。</div>
+        <div class="row2">
+          <div class="field"><label data-i18n="coverageThreshold">變化閾值 (0–255)</label><input type="number" id="coverageThreshold" value="25" min="1" max="255" step="1"></div>
+          <div class="field"><label data-i18n="coverageMinArea">最小連通面積 (原圖 px²)</label><input type="number" id="coverageMinArea" value="20" min="1" max="100000" step="1"></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label data-i18n="electrodeDiameter">圓形電極直徑 (cm)</label><input type="number" id="electrodeDiameterCm" value="0.90" min="0.01" max="100" step="0.01"></div>
+          <div class="field"><label data-i18n="electrodeArea">電極面積 (cm²)</label><input type="text" id="electrodeAreaReadout" value="0.6362" readonly></div>
+        </div>
+        <div class="field">
+          <label data-i18n="coverageXAxis">Coverage 圖 X 軸</label>
+          <select id="coverageXAxis">
+            <option value="time" data-i18n="xAxisTime">時間 (min)</option>
+            <option value="signedCapacity" data-i18n="xAxisSignedCapacity">淨面容量 (mAh cm⁻²)</option>
+            <option value="absoluteCapacity" data-i18n="xAxisAbsoluteCapacity">累積電荷通量 (mAh cm⁻²)</option>
+          </select>
+        </div>
+        <div class="hint" data-i18n="capacityHint">面容量由 ECHEM 電流對時間做梯形積分。淨面容量保留電流正負號；累積通量使用 |I|，不會因充放電互相抵消。</div>
+        <div class="row2">
+          <div class="checkline"><input type="checkbox" id="showAvramiFit"><label for="showAvramiFit" data-i18n="showAvramiFit">在 Coverage 圖顯示 Avrami 擬合</label></div>
+          <div class="field"><label for="avramiFitEnd" data-i18n="avramiFitEnd">擬合截止時間 (min)</label><input type="number" id="avramiFitEnd" min="1" step="1" value="800"></div>
+        </div>
+        <div class="hint" data-i18n="avramiFitHint">僅擬合局部主圖，擬合線只繪製至設定的截止時間；曲線吻合不代表證實成核機制。</div>
+        <div class="checkline"><input type="checkbox" id="showCoverageMask" checked><label for="showCoverageMask" data-i18n="showCoverageMask">在主圖疊加 Coverage mask</label></div>
+        <div class="row2">
+          <div class="field"><label data-i18n="coverageMaskColor">Mask 顏色</label><input type="color" id="coverageMaskColor" value="#00e5ff"></div>
+          <div class="field"><label data-i18n="coverageMaskOpacity">Mask 透明度 (%)</label><input type="number" id="coverageMaskOpacity" value="38" min="0" max="100" step="1"></div>
+        </div>
+        <div class="hint" data-i18n="coverageMaskHint">彩色區域就是被 Coverage 計算納入的像素；它是 optical-change mask，不代表單獨完成 Li 化學鑑定。</div>
+        <div class="calibration-actions">
+          <button class="btn btn-primary" type="button" id="runCoverageAnalysis" data-i18n="runCoverageAnalysis">分析 Li coverage</button>
+          <button class="btn btn-ghost" type="button" id="downloadCoverageCsv" disabled data-i18n="downloadCoverageCsv">下載 CSV</button>
+        </div>
+        <div class="calibration-status" id="coverageStatus" data-i18n="coverageNotRun">尚未分析。</div>
+      </div>
+    </div>
+
+    <div class="step" data-workflow-panel="output" hidden>
+      <span class="step-num" data-i18n="stepOutput">05 / 輸出</span>
+      <h2 data-i18n="outputHeading">影片參數</h2>
+      <div class="row2">
+        <div class="field">
+          <label>FPS</label>
+          <input type="number" id="fps" value="8" min="1" max="120" step="1">
+        </div>
+        <div class="field">
+          <label data-i18n="height">畫面高度 (px)</label>
+          <input type="number" id="outH" value="480" min="240" max="1080" step="10">
+        </div>
+      </div>
+      <div class="duration-row">
+        <div class="field">
+          <label for="frameDuration" data-i18n="duration">每張圖片顯示時間（秒）</label>
+          <input type="number" id="frameDuration" value="0.50" min="0.01" max="60" step="0.01">
+        </div>
+        <div class="duration-estimate" role="status" aria-live="polite" aria-atomic="true">
+          <span data-i18n="estimatedDuration">預估每支影片長度</span>
+          <strong id="durationEstimate">—</strong>
+          <small id="durationFormula">請先選擇圖片</small>
+        </div>
+      </div>
+
+      <p class="hint" data-i18n="timelineHint">影片長度＝圖片數 × 每張顯示時間。原始與差分影片長度一致，不受處理速度影響。FPS 為目標值，圖片切換時會補入影格以保留精確停留時間。</p>
+      <button class="btn btn-primary" id="genBtn" disabled data-i18n="generate">產生影片</button>
+      <button class="btn btn-ghost" id="cancelBtn" disabled data-i18n="cancel">取消產生</button>
+      <button class="btn btn-ghost" id="resetBtn" data-i18n="reset">重設</button>
+
+      <div class="progwrap">
+        <div class="progbar"><div class="progfill" id="progFill"></div></div>
+        <div class="progtext" id="progText" data-i18n="notStarted">尚未開始</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT STAGE: preview + log -->
+  <div class="stage">
+
+    <div class="scope">
+      <span class="scope-label">Live Preview</span>
+      <div class="preview-tabs" role="tablist" aria-label="Preview mode">
+        <button class="preview-tab active" type="button" role="tab" aria-selected="true" data-preview-mode="original" data-i18n="previewOriginal">原始影像</button>
+        <button class="preview-tab" type="button" role="tab" aria-selected="false" data-preview-mode="difference" data-i18n="previewDifference">相對第一張差分</button>
+        <button class="preview-tab" type="button" role="tab" aria-selected="false" data-preview-mode="aligned" data-i18n="previewAligned">對齊檢查</button>
+      </div>
+      <div id="scopeEmpty" class="scope-empty" data-i18n="previewEmpty">選好檔案並按「產生影片」後，這裡會即時顯示合成畫面</div>
+      <canvas id="stageCanvas" style="display:none;"></canvas>
+      <div class="readout" id="readout"></div>
+      <div class="field preview-scrubber"><label data-i18n="previewFrame">預覽圖片時間</label><input type="range" id="previewSlider" value="0" min="0" max="0" step="1" disabled></div>
+      <div class="hint" data-i18n="previewKeyboardHint">J：上一張圖片　L：下一張圖片</div>
+    </div>
+
+    <div class="downloadlist" id="downloadList"></div>
+
+    <div class="coverage-output" id="coverageOutputPanel" hidden>
+      <span class="scope-label" data-i18n="coverageResultHeading">Li Coverage 分析結果</span>
+      <canvas id="coverageChart" width="760" height="360" style="width:100%;height:auto;background:#080b0e;border:1px solid var(--line);border-radius:8px;margin-top:10px"></canvas>
+      <div class="field" style="margin-top:12px">
+        <label for="avramiEquation" data-i18n="avramiEquationLabel">Avrami 擬合方程式（局部主圖）</label>
+        <textarea id="avramiEquation" readonly rows="2" spellcheck="false" style="width:100%;box-sizing:border-box;resize:vertical;min-height:68px;font:13px/1.5 monospace" data-i18n-placeholder="avramiEquationEmpty" placeholder="執行 Coverage 分析並勾選 Avrami 擬合後顯示。"></textarea>
+        <div class="calibration-actions" style="margin-top:8px"><button class="btn btn-ghost" type="button" id="copyAvramiEquation" disabled data-i18n="copyAvramiEquation">複製方程式</button><span class="calibration-status" id="avramiEquationStatus" role="status"></span></div>
+      </div>
+    </div>
+
+    <div class="logpanel">
+      <span class="scope-label">Log</span>
+      <div id="log" class="mono"></div>
+    </div>
+
+  </div>
+</main>
+
+<!-- 版本歷程 modal：工具內建更新日誌，不只靠檔名，一打開就能查 -->
+<div class="modal-overlay" id="changelogOverlay">
+  <div class="modal-box">
+    <div class="modal-head">
+      <span data-i18n="changelog">版本歷程 / Changelog</span>
+      <button class="modal-close" id="changelogClose">✕</button>
+    </div>
+    <div class="modal-body" id="changelogBody"></div>
+  </div>
+</div>
+
+<!--
+  版號來源說明：本檔名（om_echem_video_web_v1.28.0.html）、上方 📜 版本徽章、
+  以及下面 changelogData 的最新一筆版號，三者必須一致。
+  加版規則：修 bug → 修訂版號 (x.x.N)；加功能 → 次版號 (x.N.0)；架構重寫 → 主版號 (N.0.0)。
+-->
+<script type="application/json" id="changelogData">
+[
+  {
+    "version": "1.28.0",
+    "date": "2026-09-25",
+    "notes": ["J／L 切換預覽圖片；編輯 ROI 時用方向鍵每次移動 1 原圖 px，Shift＋方向鍵快速移動 10 px"],
+    "notesEn": ["Use J/L to change preview frames; nudge an editable ROI by 1 source pixel with arrow keys or 10 with Shift"]
+  },
+  {
+    "version": "1.27.0",
+    "date": "2026-09-25",
+    "notes": ["Q／A 切換左側設定的上一頁／下一頁，輸入文字時不觸發"],
+    "notesEn": ["Use Q/A to switch settings pages without triggering shortcuts while typing"]
+  },
+  {
+    "version": "1.26.0",
+    "date": "2026-09-24",
+    "notes": ["左側設定改成快速切換頁面，無須滾過其他區塊即可進入 Coverage 或影片輸出"],
+    "notesEn": ["Switch directly between compact settings pages without scrolling past unrelated sections"]
+  },
+  {
+    "version": "1.25.0",
+    "date": "2026-09-24",
+    "notes": ["在 Coverage 圖下顯示可複製的完整 Avrami 方程式、擬合範圍與 RMSE"],
+    "notesEn": ["Show and copy the complete Avrami equation, fit range and RMSE below the coverage chart"]
+  },
+  {
+    "version": "1.24.0",
+    "date": "2026-09-24",
+    "notes": ["在 Coverage 圖疊加 Avrami 擬合線，可調整截止時間並顯示指數與 RMSE"],
+    "notesEn": ["Overlay an Avrami fit on the coverage chart, with adjustable end time, exponent and RMSE"]
+  },
+  {
+    "version": "1.23.0",
+    "date": "2026-09-24",
+    "notes": ["Coverage CSV 記錄分析時的閾值、最小連通面積、電極直徑、校正及各 ROI 範圍"],
+    "notesEn": ["Coverage CSV records the analysis threshold, connected area, electrode diameter, calibration and ROI positions"]
+  },
+  {
+    "version": "1.22.0",
+    "date": "2026-09-24",
+    "notes": ["選擇圖片資料夾時，自動以資料夾名稱命名生成影片", "直接選圖片檔案時可以自訂影片檔名"],
+    "notesEn": ["Name videos from the selected image folder", "Allow manual naming when individual image files are selected"]
+  },
+  {
+    "version": "1.21.1",
+    "date": "2026-09-24",
+    "notes": ["在 Coverage 圖的 X 軸顯示時間或面容量的數字刻度"],
+    "notesEn": ["Show numeric X-axis ticks for time and areal capacity in the coverage chart"]
+  },
+  {
+    "version": "1.21.0",
+    "date": "2026-09-24",
+    "notes": [
+      "框選區域可顯示原圖像素與校正後的實際面積",
+      "以等效直徑輸入 px 或實際長度調整框選範圍"
+    ],
+    "notesEn": [
+      "Show selected analysis area in source pixels and calibrated units",
+      "Resize analysis region by equivalent diameter in pixels or physical units"
+    ]
+  },
+  {
+    "version": "1.20.0",
+    "date": "2026-09-24",
+    "notes": [
+      "主圖左上角標籤新增字體大小設定",
+      "左側的對齊、比例尺、Zoom ROI、Li Coverage 設定改用下拉選單",
+      "各 ROI coverage 顯示於各自放大框左上角"
+    ],
+    "notesEn": [
+      "Add a font size control for main-image labels",
+      "Show alignment, scale bar, Zoom ROI, and Li Coverage settings in a dropdown",
+      "Display each ROI's coverage inside its own zoom frame"
+    ]
+  },
+  {
+    "version": "1.19.0",
+    "date": "2026-09-24",
+    "notes": [
+      "在主圖拖曳現有 Zoom ROI 與 Coverage 分析區域來移動位置",
+      "拖曳區域四角調整大小；修改後要求重新執行 Coverage 分析"
+    ],
+    "notesEn": [
+      "Move existing Zoom ROIs and the coverage analysis region directly on the main image",
+      "Resize using corner handles and invalidate coverage analysis after edits"
+    ]
+  },
+  {
+    "version": "1.18.0",
+    "date": "2026-09-23",
+    "notes": [
+      "新增独立的矩形或圆形 Coverage analysis region",
+      "固定输出 Local main image coverage，并保留各 Zoom ROI coverage",
+      "在主图叠加可调颜色与透明度的 Coverage mask"
+    ],
+    "notesEn": [
+      "Add an independent rectangular or circular coverage analysis region",
+      "Always report local-main-image coverage alongside Zoom ROI coverage",
+      "Overlay an adjustable color and opacity coverage mask on the main image"
+    ]
+  },
+  {
+    "version": "1.17.0",
+    "date": "2026-09-23",
+    "notes": [
+      "將即時 Coverage 百分比移到主影像左上角、時間標籤下方",
+      "多個 ROI 使用各自框線顏色顯示 Coverage",
+      "從 V–I–t 圖移除 Coverage 子圖"
+    ],
+    "notesEn": [
+      "Move live coverage percentages to the upper-left image overlay beneath time",
+      "Show multiple ROI coverage values in their matching ROI colors",
+      "Remove the coverage subplot from the V–I–t chart"
+    ]
+  },
+  {
+    "version": "1.16.0",
+    "date": "2026-09-23",
+    "notes": [
+      "加入圓形電極直徑與面積換算（預設直徑 0.9 cm）",
+      "由 ECHEM 電流積分計算淨面容量與累積電荷通量",
+      "Coverage 圖可切換時間、淨面容量或累積通量，CSV 同步匯出"
+    ],
+    "notesEn": [
+      "Add circular-electrode diameter and area conversion (0.9 cm default)",
+      "Integrate ECHEM current into signed areal capacity and cumulative charge throughput",
+      "Switch coverage plots among time, signed capacity, and throughput; export all in CSV"
+    ]
+  },
+  {
+    "version": "1.15.1",
+    "date": "2026-09-23",
+    "notes": [
+      "將 coverage 曲線同步加入 V/I vs. time 圖的下方子圖",
+      "紅色時間游標同步跨越電化學與 coverage 子圖",
+      "補上右側電流座標軸的 mA 數值刻度"
+    ],
+    "notesEn": [
+      "Add synchronized coverage curves beneath voltage/current versus time",
+      "Extend the moving time cursor across both subplots",
+      "Add numeric mA tick labels to the right current axis"
+    ]
+  },
+  {
+    "version": "1.15.0",
+    "date": "2026-09-23",
+    "notes": ["新增 Li optical-change coverage 分析與 CSV 匯出"],
+    "notesEn": ["Added Li optical-change coverage analysis and CSV export"]
+  },
+  {
+    "version": "1.14.0",
+    "date": "2026-09-23",
+    "notes": ["新增多個 Zoom ROI 與右側多格面板"],
+    "notesEn": ["Added multiple Zoom ROIs and the right-side grid panel"]
+  },
+  {
+    "version": "1.13.1",
+    "date": "2026-09-23",
+    "notes": ["新增 nm、µm、mm 與 cm 尺標單位選單"],
+    "notesEn": ["Added separate scale value and unit controls"]
+  },
+  {
+    "version": "1.13.0",
+    "date": "2026-09-23",
+    "notes": ["新增 Zoom ROI 內的校正比例尺"],
+    "notesEn": ["Added a calibrated scale bar inside the Zoom ROI inset"]
+  },
+  {
+    "version": "1.12.1",
+    "date": "2026-09-23",
+    "notes": ["新增 Match main image 與 Source-resolution detail ROI 顯示模式"],
+    "notesEn": ["Added Match main image and Source-resolution detail ROI rendering modes"]
+  },
+  {
+    "version": "1.12.0",
+    "date": "2026-09-23",
+    "notes": ["新增可拖曳選取的 Zoom ROI 放大視窗"],
+    "notesEn": ["Added a drag-to-select Zoom ROI inset"]
+  },
+  {
+    "version": "1.11.0",
+    "date": "2026-09-22",
+    "notes": ["新增藍色尺標自動偵測與預覽畫面手動兩端點校正"],
+    "notesEn": ["Added automatic blue scale-bar detection and manual two-endpoint calibration in preview"]
+  },
+  {
+    "version": "1.10.0",
+    "date": "2026-09-21",
+    "notes": ["新增影像對齊、對齊檢查預覽，以及比例尺位置與顏色設定"],
+    "notesEn": ["Added image alignment, alignment-check preview, and scale-bar position/color controls"]
+  },
+  {
+    "version": "1.9.5",
+    "date": "2026-09-15",
+    "notes": ["新增固定時間軸編碼與瀏覽器測試，確保影片長度不受處理速度影響"],
+    "notesEn": ["Added deterministic fixed-timeline encoding and browser regression tests"]
+  },
+  {
+    "version": "1.9.4",
+    "date": "2026-09-15",
+    "notes": [
+      "改用固定時間戳記編碼；原始與差分影片使用相同時間軸",
+      "移除錄影運算延遲與額外尾幀停留；需支援 WebCodecs 的 Chrome 或 Edge"
+    ],
+    "notesEn": [
+      "Encode with explicit timestamps; original and difference outputs share a deterministic timeline",
+      "Exclude processing delays and extra tail holds; requires Chrome or Edge with WebCodecs"
+    ]
+  },
+  {
+    "version": "1.9.3",
+    "date": "2026-09-15",
+    "notes": [
+      "每張圖片顯示時間下限降至 0.01 秒，步進改為 0.01 秒"
+    ],
+    "notesEn": [
+      "Lowered display time per image to 0.01 seconds with 0.01-second increments"
+    ]
+  },
+  {
+    "version": "1.9.2",
+    "date": "2026-09-15",
+    "notes": [
+      "將 FPS 設定上限提高至 120，並於錄影時限制輸入為 1–120"
+    ],
+    "notesEn": [
+      "Raised the FPS setting limit to 120 and enforced the 1–120 range during recording"
+    ]
+  },
+  {
+    "version": "1.9.1",
+    "date": "2026-09-14",
+    "notes": [
+      "修正 1× 中性設定可能產生格紋的問題",
+      "對比度與亮度皆為 100 時完全略過瀏覽器影像濾鏡",
+      "高品質插值僅在選擇 2× 放大時啟用，其他功能維持不變"
+    ],
+    "notesEn": [
+      "Fixed grid artifacts that could appear with neutral 1× settings",
+      "Completely bypassed browser image filters when contrast and brightness are both 100",
+      "Enabled high-quality interpolation only for 2× output while preserving all other behavior"
+    ]
+  },
+  {
+    "version": "1.9.0",
+    "date": "2026-09-14",
+    "notes": [
+      "在合成畫面預覽區新增原始影像與相對第一張差分分頁",
+      "預覽模式與影片輸出模式互相獨立，可先比較畫面再決定輸出",
+      "切換預覽分頁時保留時間、亮度、對比度、插值與標註設定"
+    ],
+    "notesEn": [
+      "Added Original and Difference from first tabs to the composed-frame preview",
+      "Made preview mode independent from video output mode",
+      "Preserved time, brightness, contrast, interpolation, and annotation settings when switching preview tabs"
+    ]
+  },
+  {
+    "version": "1.8.1",
+    "date": "2026-09-14",
+    "notes": [
+      "加長預覽圖片時間滑桿至完整預覽區寬度",
+      "新增圖片解碼快取與鄰近畫面預先載入",
+      "以動畫幀合併拖曳事件並忽略過期預覽請求，改善快速拖曳延遲"
+    ],
+    "notesEn": [
+      "Extended the preview-time scrubber to the full preview width",
+      "Added decoded-image caching and adjacent-frame preloading",
+      "Coalesced drag events per animation frame and ignored stale preview requests for smoother scrubbing"
+    ]
+  },
+  {
+    "version": "1.8.0",
+    "date": "2026-09-14",
+    "notes": [
+      "將預覽圖片時間滑桿移至合成影片預覽正下方",
+      "新增對比度與亮度滑桿及小數點後兩位數值輸入",
+      "新增 2× 高品質插值放大輸出，增加虛擬像素並提升放大平滑度"
+    ],
+    "notesEn": [
+      "Moved the preview-time scrubber directly below the composed-video preview",
+      "Added contrast and brightness sliders with two-decimal numeric inputs",
+      "Added optional 2× high-quality interpolated output for smoother upscaling"
+    ]
+  },
+  {
+    "version": "1.7.1",
+    "date": "2026-09-12",
+    "notes": [
+      "將預覽圖片滑桿移至影片輸出與進度資訊下方，讓操作順序更直覺"
+    ],
+    "notesEn": [
+      "Moved the preview-image slider below video output and progress information for a clearer workflow"
+    ]
+  },
+  {
+    "version": "1.7.0",
+    "date": "2026-09-12",
+    "notes": [
+      "新增原始＋差分雙影片輸出模式",
+      "一次按下產生後依序建立兩個影片與獨立下載按鈕",
+      "仍可選擇只生成原始影片或只生成差分影片"
+    ],
+    "notesEn": [
+      "Added combined original-and-difference video output",
+      "One generation action creates two videos with separate download buttons",
+      "Original-only and difference-only output remain available"
+    ]
+  },
+  {
+    "version": "1.6.0",
+    "date": "2026-09-12",
+    "notes": [
+      "新增儀器日期時間格式自動辨識，例如 09/11/2026 22:00:42.3394",
+      "日期時間會以第一筆為零點，自動轉換成經過時間",
+      "改善科學記號、Unicode 負號與文字數值的解析相容性"
+    ],
+    "notesEn": [
+      "Added automatic parsing of instrument date-time values such as 09/11/2026 22:00:42.3394",
+      "Date-time data is converted to elapsed time from the first valid row",
+      "Improved parsing of scientific notation, Unicode minus signs, and numeric strings"
+    ]
+  },
+  {
+    "version": "1.5.0",
+    "date": "2026-09-12",
+    "notes": [
+      "新增獨立尺標疊加功能，尺標不參與影像差分",
+      "可自訂尺標文字、畫面長度與粗細",
+      "尺標固定顯示於 OM 畫面右下角並同步輸出至預覽與影片"
+    ],
+    "notesEn": [
+      "Added an independent scale-bar overlay that is not included in image subtraction",
+      "Added editable scale label, on-screen length, and thickness",
+      "The scale bar is placed at the lower-right of the OM panel in both preview and video output"
+    ]
+  },
+  {
+    "version": "1.4.0",
+    "date": "2026-09-12",
+    "notes": [
+      "新增相對第一張影像的絕對差分模式",
+      "新增 1×–20× 差異增益，協助觀察細微變化",
+      "差分模式同步支援時間軸預覽與正式影片輸出"
+    ],
+    "notesEn": [
+      "Added absolute-difference mode relative to the first image",
+      "Added 1×–20× difference gain for subtle changes",
+      "Difference mode works in both timeline preview and final video output"
+    ]
+  },
+  {
+    "version": "1.3.0",
+    "date": "2026-09-12",
+    "notes": [
+      "新增可拖曳的產生前預覽時間軸與即時畫面預覽",
+      "新增 OM／ECHEM 獨立時間偏移校正",
+      "新增 Fit／Fill 圖片模式、自訂標註與時間顯示開關",
+      "新增取消產生、影片長度估算及重複時間檢查"
+    ],
+    "notesEn": [
+      "Added a scrubber and live pre-generation frame preview",
+      "Added independent OM and ECHEM time offsets",
+      "Added Fit/Fill image modes, custom annotation, and time-label control",
+      "Added cancellation, duration estimates, and duplicate-time validation"
+    ]
+  },
+  {
+    "version": "1.2.0",
+    "date": "2026-09-12",
+    "notes": [
+      "新增繁體中文／英文即時切換，涵蓋介面、狀態、進度、提示與常用訊息",
+      "語言選擇會儲存在瀏覽器中，下次開啟時自動套用"
+    ],
+    "notesEn": [
+      "Added instant Traditional Chinese/English switching for the interface, status, progress, hints, and common messages",
+      "The selected language is saved in the browser and restored the next time the app opens"
+    ]
+  },
+  {
+    "version": "1.1.0",
+    "date": "2026-09-12",
+    "notes": [
+      "新增純圖片模式：未上傳 ECHEM 資料時，也能依檔名時間排序產生 OM time-lapse 影片",
+      "ECHEM 資料改為選填；上傳時仍保留圖片、電壓／電流曲線與游標同步功能",
+      "新增每張圖片顯示時間設定，可直接控制輸出影片長度"
+    ],
+    "notesEn": [
+      "Added image-only mode for creating OM time-lapse videos without ECHEM data",
+      "Made ECHEM optional while retaining synchronized curves and cursor when data is supplied",
+      "Added display duration per image to control total video length"
+    ]
+  },
+  {
+    "version": "1.0.0",
+    "date": "2026-08-24",
+    "notes": [
+      "架構重寫：原本單一 HTML 拆成兩個模組——echem.js（電化學資料解析／欄位偵測／時間單位換算／曲線繪製）與 om-video.js（圖片載入／畫面合成／MediaRecorder 錄影／下載清單），HTML 只保留介面外殼",
+      "導入檔名版號規則（工具名稱_v主.次.修訂[-變體].副檔名）與本更新日誌面板，之後每次交付都會在這裡留紀錄"
+    ],
+    "notesEn": [
+      "Split the original single HTML file into ECHEM and OM/video modules with an HTML interface shell",
+      "Introduced versioned filenames and the built-in changelog panel"
+    ]
+  }
+]
+</script>
+
+<!--
+  程式邏輯已拆成兩個獨立檔案，方便分別維護／客製化：
+    1. echem_v1.28.0.js    — 電化學資料解析、日期時間／數值時間辨識、欄位偵測與曲線繪製
+    2. om-video_v1.28.0.js — 圖片載入、分頁預覽、條件式影像調整、插值放大、差分與固定時間軸編碼
+                             （有 ECHEM 資料時會呼叫 echem_v1.28.0.js 提供的 window.EchemModule）
+  請將 HTML 與所有 JS 檔案放在同一個資料夾，且保持檔名一致（含版號），直接用瀏覽器開啟本檔案即可運作。
+  之後升版時，三個檔名的版號要一起改，並在 changelogData 補上新的一筆。
+-->
+<script src="echem_v1.28.0.js"></script>
+<script src="fixed-video_v1.28.0.js"></script>
+<script src="om-video_v1.28.0.js"></script>
+</body>
+</html>

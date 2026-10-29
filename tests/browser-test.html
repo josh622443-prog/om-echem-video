@@ -1,0 +1,47 @@
+<!doctype html><meta charset="utf-8"><title>v1.28.0 browser tests</title><pre id="result">Running browser validation…</pre><iframe id="app" style="width:1200px;height:800px" src="../om_echem_video_web_v1.28.0.html"></iframe><script>
+const report=document.querySelector('#result');const frame=document.querySelector('#app');
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+async function until(fn){for(let i=0;i<1200;i++){if(fn())return;await sleep(50);}throw Error('timeout');}
+async function run(){
+ await until(()=>frame.contentWindow.FixedVideo&&frame.contentDocument.querySelector('#genBtn'));
+ const w=frame.contentWindow,d=w.document;const errors=[];w.addEventListener('error',e=>errors.push(e.message));
+ const images=[];
+ for(let i=0;i<12;i++){const c=document.createElement('canvas');c.width=320;c.height=240;const x=c.getContext('2d');x.fillStyle=`rgb(${i*20},30,80)`;x.fillRect(0,0,320,240);x.fillStyle='white';x.font='40px sans-serif';x.fillText('Image '+i,20,100);images.push(new File([await new Promise(r=>c.toBlob(r))],`frame_${i}.png`,{type:'image/png'}));}
+ const dt=new DataTransfer();images.forEach(f=>dt.items.add(f));d.querySelector('#imgInput').files=dt.files;d.querySelector('#imgInput').dispatchEvent(new w.Event('change',{bubbles:true}));
+ await until(()=>!d.querySelector('#genBtn').disabled);
+ const set=(id,v)=>{d.querySelector('#'+id).value=v;d.querySelector('#'+id).dispatchEvent(new w.Event('change',{bubbles:true}));};
+ set('outH','240');set('fps','30');set('frameDuration','0.13');
+ // Deliberately unequal processing delays must not change encoded timestamps.
+ const originalCreate=w.FixedVideo.create;let mode=0;
+ w.FixedVideo.create=async(...args)=>{const e=await originalCreate(...args),add=e.addImage;const delay=mode++===0?40:2;e.addImage=async(...a)=>{await sleep(delay);return add(...a);};return e;};
+ d.querySelector('#genBtn').click();await until(()=>!d.querySelector('#genBtn').disabled);
+ const links=[...d.querySelectorAll('#downloadList a')];if(links.length!==2)throw Error('Expected 2 outputs: '+d.body.innerText.slice(-2000));
+ const results=[];
+ for(const a of links){const blob=await(await fetch(a.href)).blob();const v=document.createElement('video');v.src=a.href;v.muted=true;document.body.append(v);await new Promise((r,j)=>{v.onloadedmetadata=r;v.onerror=()=>j(Error('decode failed'));});if(Math.abs(v.duration-1.56)>.002)throw Error('Wrong duration '+v.duration);v.currentTime=1.4;await new Promise((r,j)=>{v.onseeked=r;v.onerror=()=>j(Error('seek failed'));});results.push({name:a.download,duration:v.duration,width:v.videoWidth,height:v.videoHeight,size:blob.size});}
+ // Very short display time at low FPS must preserve each image and total duration.
+ set('visualMode','original');set('fps','8');set('frameDuration','0.01');d.querySelector('#genBtn').click();await until(()=>!d.querySelector('#genBtn').disabled);
+ const a=[...d.querySelectorAll('#downloadList a')].at(0);const v=document.createElement('video');v.src=a.href;await new Promise(r=>v.onloadedmetadata=r);if(Math.abs(v.duration-.12)>.002)throw Error('Short duration wrong');results.push({case:'0.01 sec/image at 8 nominal FPS',duration:v.duration});
+ // Cancellation must release the encoder and leave the interface usable.
+ set('fps','120');set('frameDuration','1');d.querySelector('#genBtn').click();await sleep(100);d.querySelector('#cancelBtn').click();await until(()=>!d.querySelector('#genBtn').disabled);if(d.querySelectorAll('#downloadList a').length!==3)throw Error('Cancel produced partial download');
+
+ // Regression: two modes, ECHEM chart, 2x scaling, long enough for keyframe/cluster boundary.
+ if(!w.Papa) throw Error('Papa Parse dependency not loaded');
+ const csv='time,Ewe/V,I/mA\n'+Array.from({length:12},(_,i)=>`${i},${3+i*.1},${i%2}`).join('\n');
+ set('timeUnit','min');
+ const ed=new DataTransfer();ed.items.add(new File([csv],'sample.csv',{type:'text/csv'}));d.querySelector('#echemInput').files=ed.files;d.querySelector('#echemInput').dispatchEvent(new w.Event('change',{bubbles:true}));
+ await sleep(500);
+ set('visualMode','both');set('fps','8');set('frameDuration','0.35');set('upscaleFactor','2');set('fitMode','fill');
+ d.querySelector('#showScaleBar').checked=true;
+ set('languageSelect','en');
+ d.querySelector('#genBtn').click();await until(()=>!d.querySelector('#genBtn').disabled);
+ const more=[...d.querySelectorAll('#downloadList a')].slice(0,2);
+ if(d.querySelectorAll('#downloadList a').length!==5)throw Error('ECHEM generation failed: '+d.body.innerText.slice(-1500));
+ for(const a of more){const v=document.createElement('video');v.src=a.href;await new Promise((r,j)=>{v.onloadedmetadata=r;v.onerror=()=>j(Error('long playback failed'));});if(Math.abs(v.duration-4.2)>.002||v.videoHeight!==480||v.videoWidth!==1264)throw Error('ECHEM/2x geometry or timing incorrect: '+v.duration+' '+v.videoWidth+'x'+v.videoHeight);v.currentTime=3.9;await new Promise(r=>v.onseeked=r);results.push({case:'ECHEM + 2x + two clusters',name:a.download,duration:v.duration,width:v.videoWidth,height:v.videoHeight});}
+ // Graceful unsupported-browser handling and recovery.
+ const encoderClass=w.VideoEncoder;w.VideoEncoder=undefined;const before=d.querySelectorAll('#downloadList a').length;d.querySelector('#genBtn').click();await until(()=>!d.querySelector('#genBtn').disabled);if(d.querySelectorAll('#downloadList a').length!==before||!d.body.innerText.includes('WebCodecs'))throw Error('Unsupported-browser guard failed');w.VideoEncoder=encoderClass;
+ if(errors.length)throw Error(errors.join(';'));
+ report.textContent='PASS\n'+JSON.stringify(results,null,2)+'\nCancellation passed.';
+}
+run().catch(async e=>{report.textContent='FAIL '+e.stack;});
+</script>
+

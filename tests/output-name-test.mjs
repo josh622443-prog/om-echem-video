@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+const html=await readFile(new URL('../om_echem_video_web_v1.28.0.html',import.meta.url),'utf8');
+const video=await readFile(new URL('../om-video_v1.28.0.js',import.meta.url),'utf8');
+assert.match(html, /id="folderInput"[^>]*webkitdirectory/);
+assert.match(html, /id="outputBaseName"/);
+assert.match(video, /files\[0\]\?\.webkitRelativePath\?\.split\("\/"\)\[0\]/);
+assert.match(video, /imgInput\.addEventListener\("change",\(\)=>handleImagesSelected\(imgInput\)\)/);
+assert.match(video, /folderInput\.addEventListener\("change",\(\)=>handleImagesSelected\(folderInput\)\)/);
+const body=video.match(/  function safeOutputName\(name\)\{([\s\S]*?)\n  \}/)?.[1];
+assert.ok(body);
+const clean=new Function('name',body);
+assert.equal(clean('Run:42/OM'),'Run_42_OM');
+assert.equal(clean('Plating results. '),'Plating results');
+assert.equal(clean('Li plating 20×'),'Li plating 20×');
+assert.match(video,/const filename = `\$\{baseName\}.*_difference/);
+console.log('Folder-based video naming passed.');

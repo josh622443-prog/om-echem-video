@@ -1,0 +1,21 @@
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import vm from 'node:vm';
+
+const src=await readFile(new URL('../om-video_v1.28.0.js',import.meta.url),'utf8');
+const start=src.indexOf('  function workflowShortcutDirection(');
+const end=src.indexOf('  document.addEventListener("keydown"',start);
+assert.ok(start>=0&&end>start);
+const select={};
+const direction=vm.runInNewContext('const workflowSection=select;'+src.slice(start,end)+';workflowShortcutDirection',{select});
+const page={closest:()=>null},input={closest:()=>({tagName:'INPUT'})};
+assert.equal(direction({key:'q',target:page},false),-1);
+assert.equal(direction({key:'A',target:page},false),1);
+assert.equal(direction({key:'a',target:input},false),0);
+assert.equal(direction({key:'a',target:select},false),1);
+assert.equal(direction({key:'a',target:page,ctrlKey:true},false),0);
+assert.equal(direction({key:'q',target:page,isComposing:true},false),0);
+assert.equal(direction({key:'a',target:page},true),0);
+assert.equal(direction({key:'ArrowDown',target:page},false),0);
+assert.ok(src.includes('Math.min(options.length-1,Math.max(0,current+direction))'), 'Shortcut stops at the first/last page');
+console.log('Workflow shortcuts passed: Q/A, typing, modifiers, dialogs and bounds.');

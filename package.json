@@ -1,0 +1,10 @@
+{
+  "name": "om-echem-video-generator",
+  "version": "1.28.0",
+  "private": true,
+  "description": "Browser-based OM time-lapse and optional ECHEM synchronization tool",
+  "scripts": {
+    "test": "node tests/smoke-test.mjs && node tests/timeline-test.mjs && node tests/roi-edit-test.mjs && node tests/coverage-label-test.mjs && node tests/output-name-test.mjs && node tests/avrami-fit-test.mjs && node tests/workflow-shortcuts-test.mjs && node tests/keyboard-roi-test.mjs"
+  },
+  "license": "SEE LICENSE IN LICENSE"
+}
