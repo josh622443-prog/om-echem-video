@@ -2,12 +2,12 @@
 
 Browser-based tool for converting time-ordered optical microscopy (OM) images into WebM videos, with optional synchronized electrochemical (ECHEM/GCPL) curves.
 
-Current version: **v1.28.0** (2026-09-25)
+Current version: **v1.29.0** (2026-11-17)
 
 ## Quick start
 
-1. Keep the HTML and all three JavaScript runtime files in the same directory.
-2. Open `index.html` or `om_echem_video_web_v1.28.0.html` in a current Chromium-based browser. Both HTML files contain the same application.
+1. Keep the HTML, all version-matched runtime JavaScript files, and the vendor folder together.
+2. Open `index.html` or `om_echem_video_web_v1.29.0.html` in a current Chromium-based browser. Both HTML files contain the same application.
 3. Select OM images. The trailing number in each filename is interpreted as elapsed minutes, so `OM_frame_23.jpg` means 23 min.
 4. Optionally select a GCPL TXT/CSV file and verify its time unit or manually enter column names if automatic detection fails.
 5. Choose the output mode and generate the video.
@@ -65,10 +65,10 @@ No build step or server is required. Internet access is needed at first load for
 | File | Purpose |
 | --- | --- |
 | `index.html` | GitHub Pages entry, identical to the versioned HTML |
-| `om_echem_video_web_v1.28.0.html` | Interface, styles, inputs, and embedded changelog |
-| `echem_v1.28.0.js` | ECHEM parsing, column detection, time conversion, and chart rendering |
-| `fixed-video_v1.28.0.js` | Fixed timeline, WebCodecs encoding, and WebM writing |
-| `om-video_v1.28.0.js` | Artifact-safe tabbed preview, adjustments, interpolation, synchronization, difference rendering, recording, and downloads |
+| `om_echem_video_web_v1.29.0.html` | Interface, styles, inputs, and embedded changelog |
+| `echem_v1.29.0.js` | ECHEM parsing, column detection, time conversion, and chart rendering |
+| `fixed-video_v1.29.0.js` | Fixed timeline, WebCodecs encoding, and WebM writing |
+| `om-video_v1.29.0.js` | Artifact-safe tabbed preview, adjustments, interpolation, synchronization, difference rendering, recording, and downloads |
 | `AGENTS.md` | Instructions and constraints for Codex contributors |
 | `CHANGELOG.md` | Release history |
 | `LICENSE` | Noncommercial-use terms |
@@ -113,7 +113,7 @@ The original repository's **PolyForm Noncommercial License 1.0.0** is retained i
 
 ## v1.9.5 固定時間軸 / Fixed timeline
 
-使用新版 Chrome 或 Edge 開啟同資料夾的 `om_echem_video_web_v1.28.0.html`。請保留所有 JS 檔案。
+使用新版 Chrome 或 Edge 開啟同資料夾的 `om_echem_video_web_v1.29.0.html`。請保留所有 JS 檔案。
 影片長度 = 成功載入的圖片數 × 每張顯示秒數；兩種輸出共用相同圖片清單。
 FPS 控制一般影格間隔；圖片切換時會加入精確邊界影格（可變影格率），避免跳過圖片或改變每張停留時間。
 WebM 時間精度為 1 毫秒。計算或讀圖耗時不會加進影片，結尾也不再額外停留。
@@ -127,3 +127,18 @@ Open the HTML in current Chrome/Edge, keeping all JS files alongside it. Duratio
 「每張圖片顯示時間」右側會即時顯示每支影片的預估長度與計算式。變更圖片、顯示時間、語言或按下重設時都會更新。預估值以已選取且檔名有效的圖片數計算；若個別圖片在輸出時無法解碼，實際長度可能較短。
 
 The calculator beside “Display time per image” shows the estimated duration per output video and its formula. It updates when images, display time, language, or reset changes. The estimate uses selected images with valid filenames; unreadable images excluded during export can make the final duration shorter.
+
+
+## TIFF images — v1.29.0
+
+Download the [current v1.29.0 runtime ZIP](https://github.com/josh622443-prog/om-echem-video/raw/refs/heads/main/downloads/OM-ECHEM-v1.29.0.zip), extract the whole folder, and open index.html. Choose TIFF files or an image folder exactly as for PNG/JPEG. No conversion, Python installation, or image upload is required. TIFF codec and compression libraries are bundled locally in vendor/; keep that folder.
+
+Classic .tif/.tiff images are decoded locally: unsigned interleaved RGB/RGBA (8/16-bit), unsigned grayscale (1/2/4/8/16-bit), and 8-bit palette TIFF, with supported uncompressed, LZW, PackBits, Deflate and common TIFF JPEG/CCITT paths. Not every TIFF variant is supported: BigTIFF, signed/float samples, planar-separated pixels, unlisted compression/layouts and images over 40 megapixels are rejected with a diagnostic. Compression variants beyond those in TESTING.md have not all been validated.
+
+The first largest image directory is used; smaller embedded thumbnails are ignored. Additional equally sized pages are **not expanded into timepoints** and produce a warning. Split true image stacks into separate files before use. Filename trailing digits remain minutes (000007.tif = 7 min); renaming does not infer the capture interval.
+
+16-bit images use a fixed full unsigned range to display as 8-bit; there is no independent per-frame automatic contrast normalization. This loses display precision, and low-range 16-bit signals can look dark. Source files are unchanged. Difference, alignment, coverage and video use the same decoded display pixels; this is not a raw 16-bit quantitative analysis pipeline. TIFF orientation is applied consistently.
+
+Only on-demand images are decoded. TIFF jobs are serialized, a worker is used over localhost, direct-file opening falls back locally, and the decoded image LRU is limited to six entries. Selected-file counts do not imply every file has decoded successfully; failed frames remain reported by the existing export workflow. Full large-sequence export still requires reading every source image.
+
+繁體中文：完整解壓縮 v1.29.0 使用包，開啟 index.html，再選取 TIFF 檔案或資料夾。vendor 資料夾必須保留，不用先轉成 PNG。內附縮圖不會算成影格；真正多頁 TIFF 只使用第一張最大尺寸影像，請先拆成單張檔案。檔名結尾數字仍以分鐘解讀。16-bit 以固定全範圍轉成 8-bit 顯示，原始 TIFF 不變。

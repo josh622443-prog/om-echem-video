@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 
-const src=await readFile(new URL('../om-video_v1.28.0.js',import.meta.url),'utf8');
+const src=await readFile(new URL('../om-video_v1.29.0.js',import.meta.url),'utf8');
 const start=src.indexOf('  function workflowShortcutDirection(');
 const end=src.indexOf('  document.addEventListener("keydown"',start);
 assert.ok(start>=0&&end>start);

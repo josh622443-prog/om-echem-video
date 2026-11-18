@@ -135,3 +135,12 @@ Verified in Chromium browser on 2026-09-15:
 This release changes FPS to a nominal cadence with additional image-boundary frames, preserving exact display time instead of dropping fast images. Timing is independent of rendering load.
 
 Validation limitation: browser execution was tested over localhost. Direct file navigation was blocked by the automated browser policy; direct-file launch must be checked manually. Runtime scripts remain classic relative scripts with no module fetches or added remote dependencies. `npm` was unavailable on the test host; both commands in the npm test script were executed directly with Node and passed.
+
+
+## v1.29.0 TIFF validation — 2026-11-17
+
+Executed all nine commands from package.json's npm test script directly with Node (npm is unavailable on this computer): passed. TIFF fixtures cover exact RGB pixels, both byte orders, Deflate, fixed unsigned 16-bit grayscale mapping, thumbnail/stack selection, truncated data, directory loops and matching HTML entries. tests/tiff-browser-test.html tests orientation, failed-job recovery and original/difference WebM playback over localhost.
+
+A locally held research TIFF was used without inclusion in the repository/package: 2880×2160 RGB 8-bit, uncompressed, with an embedded 160×120 thumbnail. Full RGBA pixel hash matched Pillow independently for all 6,220,800 pixels. Three actual source images produced original and difference 0.600 s WebM videos that played and sought successfully in Edge. Direct file:// opening and TIFF fallback were also verified. Existing synthetic browser harness passed timing, short intervals, ECHEM + 2× scaling, both outputs, seeking, cancellation and unsupported WebCodecs behavior. Research images, their names, pixel exports and generated videos are not distributed.
+
+This is not full codec coverage: JPEG/CCITT, tiled files, every microscope vendor and full 988-image export have not all been tested. True multipage stacks are not expanded into separate times; signed/floating-point, BigTIFF and planar-separated TIFF are explicitly rejected.

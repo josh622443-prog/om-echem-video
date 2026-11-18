@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
-const version = "1.28.0";
+const version = "1.29.0";
 const htmlName = `om_echem_video_web_v${version}.html`;
 const echemName = `echem_v${version}.js`;
 const videoName = `om-video_v${version}.js`;
@@ -58,8 +58,8 @@ new Function(video);
 
 console.log(`Smoke test passed for OM × ECHEM Video Generator v${version}.`);
 
-const fixed = await readFile(new URL('../fixed-video_v1.28.0.js', import.meta.url), 'utf8');
-assert.ok(html.includes('<script src="fixed-video_v1.28.0.js"></script>'));
+const fixed = await readFile(new URL('../fixed-video_v1.29.0.js', import.meta.url), 'utf8');
+assert.ok(html.includes('<script src="fixed-video_v1.29.0.js"></script>'));
 for (const id of ['alignEnabled','maxShift','roiX','roiY','roiW','roiH','alignmentReadout','scalePosition','scaleColor']) {
   assert.ok(html.includes(`id="${id}"`), `Missing alignment/scale control: ${id}`);
 }

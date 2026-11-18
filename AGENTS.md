@@ -8,13 +8,13 @@ The user has authorized automatic commits and uploads after each completed updat
 
 ## Tool scope
 
-Maintain the browser-only OM × ECHEM Video Generator. Do not add a backend, upload research data, or introduce telemetry unless the user explicitly requests it.
+Maintain the browser-only OM Ã— ECHEM Video Generator. Do not add a backend, upload research data, or introduce telemetry unless the user explicitly requests it.
 
 ## Architecture
 
 - HTML owns the UI shell, CSS, input elements, and embedded changelog.
-- `echem_v1.28.0.js` must remain DOM-independent and expose `window.EchemModule`.
-- `om-video_v1.28.0.js` owns DOM binding, artifact-safe image processing, tabbed cached preview, synchronization, Canvas composition, fixed-timeline encoding, and download management.
+- `echem_v1.29.0.js` must remain DOM-independent and expose `window.EchemModule`.
+- `om-video_v1.29.0.js` owns DOM binding, artifact-safe image processing, tabbed cached preview, synchronization, Canvas composition, fixed-timeline encoding, and download management.
 - Papa Parse is provided as global `window.Papa` by the HTML CDN script.
 
 ## Versioning
@@ -34,10 +34,10 @@ Never deliver a release whose HTML points to JavaScript files from another versi
 - Preserve automatic numeric ordering based on trailing filename digits.
 - Keep the scale-bar overlay outside the image-difference calculation.
 - Apply contrast and brightness consistently to preview and final output. Keep their slider and numeric controls synchronized to two decimals.
-- Treat 2× interpolation as calculated upscaling, not recovery of missing microscope detail.
+- Treat 2Ã— interpolation as calculated upscaling, not recovery of missing microscope detail.
 - Keep preview caching bounded and prevent stale asynchronous image loads from overwriting the latest slider position.
 - Keep preview-tab selection independent from final output-mode selection.
-- At neutral 100% contrast, 100% brightness, and 1× output, bypass Canvas filters and explicit high-quality interpolation to preserve the v1.7 rendering path.
+- At neutral 100% contrast, 100% brightness, and 1Ã— output, bypass Canvas filters and explicit high-quality interpolation to preserve the v1.7 rendering path.
 - Treat difference mode as absolute per-channel pixel difference relative to the first image; document that experimental artifacts can create signal.
 - Do not send selected files or generated video outside the browser.
 - Avoid unnecessary dependencies and keep direct-file opening supported.
@@ -50,4 +50,6 @@ Run `npm test`, then follow `TESTING.md`. For changes to rendering or recording,
 
 This project is not open source under an OSI-approved license. Preserve the noncommercial restriction in `LICENSE`; do not replace it with MIT, Apache-2.0, BSD, or GPL without explicit author approval.
 
-- `fixed-video_v1.28.0.js` owns deterministic frame timing, WebCodecs encoding, and the bundled WebM writer. Version its filename and HTML reference together.
+- `fixed-video_v1.29.0.js` owns deterministic frame timing, WebCodecs encoding, and the bundled WebM writer. Version its filename and HTML reference together.
+
+`tiff_v1.29.0.js` provides local TIFF decoding in a worker with direct-file fallback. Keep vendored UTIF/pako license files, preserve fixed cross-frame intensity mapping, and never upload research TIFFs. Validate original/difference previews and native video export using synthetic and local TIFF files.

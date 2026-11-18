@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import '../fixed-video_v1.28.0.js';
+import '../fixed-video_v1.29.0.js';
 
 // Image boundaries, nominal frame ticks, and final duration must remain exact,
 // including sub-frame image durations and values not divisible by the FPS.

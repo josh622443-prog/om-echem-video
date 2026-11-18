@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
 
-const source=await readFile(new URL('../om-video_v1.28.0.js',import.meta.url),'utf8');
+const source=await readFile(new URL('../om-video_v1.29.0.js',import.meta.url),'utf8');
 const start=source.indexOf('  function adjustedRegion(');
 const end=source.indexOf('\n  async function beginZoomRoiPicking',start);
 assert.ok(start>=0&&end>start,'ROI geometry function is available');

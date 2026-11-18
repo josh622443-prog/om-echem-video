@@ -1,0 +1,26 @@
+<!doctype html><meta charset="utf-8"><title>TIFF browser validation</title><pre id="result">Running…</pre><iframe id="app" style="width:1100px;height:800px" src="../index.html"></iframe>
+<script type="module">
+import {tiff} from './tiff-fixture.mjs';
+const report=document.querySelector('#result'),frame=document.querySelector('#app');
+const wait=async f=>{for(let i=0;i<1200;i++){if(f())return;await new Promise(r=>setTimeout(r,50));}throw Error('timeout');};
+const check=(v,m)=>{if(!v)throw Error(m);};
+try{
+ await wait(()=>frame.contentWindow.OmTiffImages&&frame.contentWindow.FixedVideo);
+ const w=frame.contentWindow,d=frame.contentDocument;
+ const rgb=new Uint8Array([255,0,0,0,255,0,0,0,255,128,128,128]);
+ const make=(n,options)=>new w.File([tiff(options)],n,{type:'image/tiff'});
+ const source=make('000000.tif',{data:rgb});
+ const canvas=await w.OmTiffImages.decode(source);check(canvas.width===2&&canvas.height===2,'Original dimensions');
+ const rotated=await w.OmTiffImages.decode(make('000001.tif',{data:rgb,orientation:6}));
+ check(JSON.stringify([...rotated.getContext('2d').getImageData(0,0,1,1).data])==='[0,0,255,255]','Orientation 6');
+ let rejected=false;try{await w.OmTiffImages.decode(new w.File(['bad'],'bad.tif'));}catch{rejected=true;}check(rejected,'Invalid TIFF rejected');
+ check((await w.OmTiffImages.decode(source)).width===2,'Decode queue recovery');
+ const dt=new w.DataTransfer();dt.items.add(source);dt.items.add(make('000001.tif',{data:new Uint8Array(12).fill(200)}));
+ d.querySelector('#imgInput').files=dt.files;d.querySelector('#imgInput').dispatchEvent(new w.Event('change'));
+ await wait(()=>!d.querySelector('#genBtn').disabled);
+ for(const [id,value]of [['outH','240'],['frameDuration','0.15'],['fps','8'],['visualMode','both']]){d.getElementById(id).value=value;d.getElementById(id).dispatchEvent(new w.Event('change'));}
+ d.getElementById('genBtn').click();await wait(()=>d.querySelectorAll('#downloadList a').length===2);
+ const outputs=[];for(const a of d.querySelectorAll('#downloadList a')){const v=d.createElement('video');v.src=a.href;await new Promise((r,j)=>{v.onloadedmetadata=r;v.onerror=()=>j(Error('Cannot play TIFF output'));});check(Math.abs(v.duration-.3)<.002,'TIFF video duration');outputs.push(a.download);}
+ report.textContent='PASS\nTIFF dimensions, orientation, invalid-file recovery, and both WebM outputs: '+outputs.join(', ');
+}catch(e){report.textContent='FAIL '+e.stack;}
+</script>

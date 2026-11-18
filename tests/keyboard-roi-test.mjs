@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 
-const source=await readFile(new URL('../om-video_v1.28.0.js',import.meta.url),'utf8');
+const source=await readFile(new URL('../om-video_v1.29.0.js',import.meta.url),'utf8');
 const moveStart=source.indexOf('  function moveRegionBySourcePixels(');
 const moveEnd=source.indexOf('  function nudgeSelectedRoi(',moveStart);
 assert.ok(moveStart>=0&&moveEnd>moveStart);

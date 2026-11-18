@@ -1,5 +1,14 @@
 # v1.28.0 — 2026-09-25
 
+
+## v1.29.0 — 2026-11-17
+- Added bundled local TIFF decoding for original preview, alignment, difference, coverage and video export.
+- Read the largest image directory; ignore embedded thumbnails and warn when other equally sized pages are omitted.
+- Apply TIFF orientation; use fixed full-range mapping for unsigned 16-bit images.
+- Serialize TIFF work, use a worker when served locally, support direct-file fallback, and bound decoded cache to six entries.
+- Clarify that selected file counts are not successful decode counts.
+- Preserve image-only and ECHEM workflows and original project licensing.
+
 - Use J/L to preview the previous/next image without touching the slider.
 - Move the selected zoom ROI or coverage analysis region with arrow keys, one source-image pixel per press or ten pixels with Shift.
 - Invalidate stale coverage results after moving a region; preserve the existing region dimensions and stop at image edges.
