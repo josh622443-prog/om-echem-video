@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 
-const source = await readFile(new URL('../om-video_v1.29.0.js', import.meta.url), 'utf8');
+const source = await readFile(new URL('../om-video_v1.29.1.js', import.meta.url), 'utf8');
 const start = source.indexOf('  function fitAvramiCoverage(');
 const end = source.indexOf('  function clearAvramiEquation()', start);
 assert.ok(start >= 0 && end > start, 'Avrami fitter must be present');

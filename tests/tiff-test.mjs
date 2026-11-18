@@ -4,7 +4,7 @@ import {readFile} from 'node:fs/promises';
 import {deflateSync} from 'node:zlib';
 import {tiff} from './tiff-fixture.mjs';
 const c=vm.createContext({console});c.self=c;
-for(const file of ['vendor/pako-inflate-1.0.11.min.js','vendor/UTIF-3.1.0.js','tiff_v1.29.0.js']){
+for(const file of ['vendor/pako-inflate-1.0.11.min.js','vendor/UTIF-3.1.0.js','tiff_v1.29.1.js']){
  let code=await readFile(new URL('../'+file,import.meta.url),'utf8');
  if(file.startsWith('tiff_'))code=code.replace("const scriptUrl=document.currentScript.src;",'return;');
  vm.runInContext(code,c);
@@ -24,5 +24,5 @@ assert.equal(decode(tiff({data:rgb,pages:[{...thumb,width:2,height:2,data:rgb}]}
 assert.throws(()=>decode(new ArrayBuffer(2)),/Truncated/);
 const loop=tiff();new DataView(loop).setUint32(8+2+12*12,8,true);assert.throws(()=>decode(loop),/directory chain/);
 const truncated=tiff().slice(0,-3);assert.throws(()=>decode(truncated),/truncated TIFF pixel blocks/);
-const html=await readFile(new URL('../index.html',import.meta.url),'utf8');assert(html.includes('vendor/UTIF-3.1.0.js')&&html.includes('tiff_v1.29.0.js'));assert.equal(html,await readFile(new URL('../om_echem_video_web_v1.29.0.html',import.meta.url),'utf8'));
+const html=await readFile(new URL('../index.html',import.meta.url),'utf8');assert(html.includes('vendor/UTIF-3.1.0.js')&&html.includes('tiff_v1.29.1.js'));assert.equal(html,await readFile(new URL('../om_echem_video_web_v1.29.1.html',import.meta.url),'utf8'));
 console.log('TIFF: RGB pixels, endian, Deflate, 16-bit fixed mapping, thumbnail/stack selection, malformed input and matching HTML passed.');

@@ -1,0 +1,32 @@
+<!doctype html><meta charset="utf-8"><title>Preview responsiveness regression</title><pre id="result">Running…</pre><iframe id="app" src="../index.html" style="width:1100px;height:800px"></iframe>
+<script type="module">
+import {tiff} from './tiff-fixture.mjs';
+const report=document.getElementById('result'),frame=document.getElementById('app');
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+async function wait(f){for(let i=0;i<600;i++){if(f())return;await sleep(25);}throw Error('timeout');}
+const check=(v,m)=>{if(!v)throw Error(m);};
+try{
+ await wait(()=>frame.contentWindow.OmTiffImages&&frame.contentWindow.FixedVideo);
+ const w=frame.contentWindow,d=frame.contentDocument;const errors=[];w.addEventListener('error',e=>errors.push(e.message));
+ const decoder=w.OmTiffImages.decode.bind(w.OmTiffImages),calls=[];
+ w.OmTiffImages.decode=async file=>{calls.push(file.name);await sleep(180);return decoder(file);};
+ const dt=new w.DataTransfer();for(let i=0;i<8;i++)dt.items.add(new w.File([tiff({data:new Uint8Array(12).fill(i*20)})],`frame_${i}.tif`,{type:'image/tiff'}));
+ d.getElementById('imgInput').files=dt.files;d.getElementById('imgInput').dispatchEvent(new w.Event('change'));d.getElementById('previewBtn').click();
+ await wait(()=>d.getElementById('readout').textContent.includes('frame 1/8'));
+ const slider=d.getElementById('previewSlider'),move=i=>{slider.value=i;slider.dispatchEvent(new w.Event('input'));};
+ move(1);await sleep(90);for(let i=2;i<8;i++){move(i);await sleep(25);}
+ await wait(()=>d.getElementById('readout').textContent.includes('frame 8/8'));
+ check(calls.length<=4,'Superseded TIFF reads queued: '+calls.join(','));await sleep(250);
+ check(d.getElementById('readout').textContent.includes('frame 8/8'),'Stale frame painted');
+ check(d.getElementById('stageCanvas').getAttribute('aria-busy')==='false','Busy state did not clear');
+ move(4);await sleep(110);d.getElementById('resetBtn').click();await sleep(300);
+ check(d.getElementById('stageCanvas').style.display==='none'&&!d.getElementById('readout').textContent,'Reset painted a stale frame');
+ check(d.getElementById('stageCanvas').getAttribute('aria-busy')==='false','Reset left busy state');
+ const before=calls.length,canvas=d.createElement('canvas');canvas.width=20;canvas.height=20;
+ const png=await new Promise(r=>canvas.toBlob(r,'image/png'));const pd=new w.DataTransfer();pd.items.add(new w.File([png],'000000.png',{type:'image/png'}));
+ d.getElementById('imgInput').files=pd.files;d.getElementById('imgInput').dispatchEvent(new w.Event('change'));d.getElementById('previewBtn').click();
+ await wait(()=>d.getElementById('readout').textContent.includes('frame 1/1'));
+ check(calls.length===before,'PNG incorrectly used TIFF decoder');check(!errors.length,errors.join(';'));
+ report.textContent='PASS\nSlow TIFF scrub coalesced; final frame correct; reset cancels pending work; PNG bypasses TIFF decoder. Decode calls during burst: '+calls.slice(0,before-1).join(',');
+}catch(e){report.textContent='FAIL '+e.stack;}
+</script>

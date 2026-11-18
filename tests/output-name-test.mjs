@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-const html=await readFile(new URL('../om_echem_video_web_v1.29.0.html',import.meta.url),'utf8');
-const video=await readFile(new URL('../om-video_v1.29.0.js',import.meta.url),'utf8');
+const html=await readFile(new URL('../om_echem_video_web_v1.29.1.html',import.meta.url),'utf8');
+const video=await readFile(new URL('../om-video_v1.29.1.js',import.meta.url),'utf8');
 assert.match(html, /id="folderInput"[^>]*webkitdirectory/);
 assert.match(html, /id="outputBaseName"/);
 assert.match(video, /files\[0\]\?\.webkitRelativePath\?\.split\("\/"\)\[0\]/);

@@ -13,8 +13,8 @@ Maintain the browser-only OM Ã— ECHEM Video Generator. Do not add a backend, 
 ## Architecture
 
 - HTML owns the UI shell, CSS, input elements, and embedded changelog.
-- `echem_v1.29.0.js` must remain DOM-independent and expose `window.EchemModule`.
-- `om-video_v1.29.0.js` owns DOM binding, artifact-safe image processing, tabbed cached preview, synchronization, Canvas composition, fixed-timeline encoding, and download management.
+- `echem_v1.29.1.js` must remain DOM-independent and expose `window.EchemModule`.
+- `om-video_v1.29.1.js` owns DOM binding, artifact-safe image processing, tabbed cached preview, synchronization, Canvas composition, fixed-timeline encoding, and download management.
 - Papa Parse is provided as global `window.Papa` by the HTML CDN script.
 
 ## Versioning
@@ -50,6 +50,6 @@ Run `npm test`, then follow `TESTING.md`. For changes to rendering or recording,
 
 This project is not open source under an OSI-approved license. Preserve the noncommercial restriction in `LICENSE`; do not replace it with MIT, Apache-2.0, BSD, or GPL without explicit author approval.
 
-- `fixed-video_v1.29.0.js` owns deterministic frame timing, WebCodecs encoding, and the bundled WebM writer. Version its filename and HTML reference together.
+- `fixed-video_v1.29.1.js` owns deterministic frame timing, WebCodecs encoding, and the bundled WebM writer. Version its filename and HTML reference together.
 
-`tiff_v1.29.0.js` provides local TIFF decoding in a worker with direct-file fallback. Keep vendored UTIF/pako license files, preserve fixed cross-frame intensity mapping, and never upload research TIFFs. Validate original/difference previews and native video export using synthetic and local TIFF files.
+`tiff_v1.29.1.js` provides local TIFF decoding in a worker with direct-file fallback. Keep vendored UTIF/pako license files, preserve fixed cross-frame intensity mapping, and never upload research TIFFs. Validate original/difference previews and native video export using synthetic and local TIFF files.

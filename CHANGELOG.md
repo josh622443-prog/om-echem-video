@@ -1,6 +1,14 @@
 # v1.28.0 — 2026-09-25
 
 
+## v1.29.1 — 2026-11-18
+- Coalesce slider requests into one active preview plus the newest pending target.
+- Clear queued previews on new input, reset and export; guard every asynchronous stage against stale paints.
+- Decode native PNG/JPEG pixels before drawing and avoid large-image neighbor preloads.
+- Yield during alignment searches, abort superseded searches, and reuse reference projections.
+- Preserve image alignment scores, thresholds, output geometry, full video timelines and TIFF support.
+
+
 ## v1.29.0 — 2026-11-17
 - Added bundled local TIFF decoding for original preview, alignment, difference, coverage and video export.
 - Read the largest image directory; ignore embedded thumbnails and warn when other equally sized pages are omitted.
